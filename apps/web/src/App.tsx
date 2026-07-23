@@ -21,13 +21,19 @@ import './App.css'
 const DEFAULT_BPM = 160
 const DEFAULT_REST_PROB = 0
 
-const initialSettings: ProjectSettings = {
+function defaultCandidateCount(): number {
+  if (typeof window === 'undefined') return 8
+  // タッチ端末は PC レイアウトでも候補数デフォルト 4
+  const isTouch = window.matchMedia('(pointer: coarse)').matches
+  return isTouch ? 4 : 8
+}
+
+const initialSettingsBase: Omit<ProjectSettings, 'candidateCount'> = {
   keyRoot: 0,
   scale: 'major',
   bpm: DEFAULT_BPM,
   octave: 4,
   rhythmId: 'eighths',
-  candidateCount: 8,
   restProbability: DEFAULT_REST_PROB,
 }
 
@@ -41,12 +47,15 @@ function clonePhrase(phrase: Phrase): Phrase {
 
 export default function App() {
   const [mode, setMode] = useState<GenMode>('distribution')
-  const [settings, setSettings] = useState<ProjectSettings>(initialSettings)
+  const [settings, setSettings] = useState<ProjectSettings>(() => ({
+    ...initialSettingsBase,
+    candidateCount: defaultCandidateCount(),
+  }))
   const [distribution, setDistribution] = useState(() =>
     createDefaultDistribution(
-      initialSettings.keyRoot,
-      initialSettings.octave,
-      initialSettings.scale,
+      initialSettingsBase.keyRoot,
+      initialSettingsBase.octave,
+      initialSettingsBase.scale,
     ),
   )
   const [sequence, setSequence] = useState(createDefaultSequence)

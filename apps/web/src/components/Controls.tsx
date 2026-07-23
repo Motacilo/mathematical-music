@@ -126,20 +126,20 @@ export function Controls({
 
         <label>
           候補数
-          <input
-            type="number"
-            min={5}
-            max={8}
+          <select
             value={settings.candidateCount}
             onChange={(e) =>
               onSettingsChange({
-                candidateCount: Math.min(
-                  8,
-                  Math.max(5, Number(e.target.value) || 5),
-                ),
+                candidateCount: Number(e.target.value),
               })
             }
-          />
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label>

@@ -16,7 +16,7 @@ export function generateCandidates(
   distribution: DistributionParams,
   sequence: SequenceParams,
 ): Phrase[] {
-  const count = Math.min(8, Math.max(5, settings.candidateCount))
+  const count = Math.min(8, Math.max(1, settings.candidateCount))
   const out: Phrase[] = []
   for (let i = 0; i < count; i++) {
     if (mode === 'distribution') {
