@@ -37,11 +37,11 @@ npm run preview
 
 ## 公開（GitHub Pages）
 
-公開 URL: `https://motacilo.github.io/mathematical-music/`
+- リポジトリ: https://github.com/Motacilo/mathematical-music
+- 公開 URL: https://motacilo.com/mathematical-music/ （カスタムドメイン）
+- 代替: https://motacilo.github.io/mathematical-music/
 
 `main` への push で GitHub Actions がビルドし、Pages にデプロイします。
-
-初回のみリポジトリの **Settings → Pages → Source** が **GitHub Actions** になっていることを確認してください（Actions の初回実行後に自動で見える場合もあります）。
 
 ## 使い方
 
