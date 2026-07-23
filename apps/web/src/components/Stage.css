@@ -1,0 +1,165 @@
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stage--empty {
+  padding: 28px 20px;
+  color: #4a5568;
+  background: rgba(45, 74, 107, 0.06);
+  border: 1px dashed rgba(45, 74, 107, 0.28);
+  border-radius: 6px;
+}
+
+.stage__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stage__item {
+  background: #eef3f9;
+  border: 1px solid rgba(45, 74, 107, 0.22);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stage__item-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2d4a6b;
+}
+
+.stage__item-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stage__item-tags {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #5a7a9a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stage__item-actions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.stage__item-actions button {
+  font: inherit;
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(45, 74, 107, 0.25);
+  background: #fff;
+  color: #2d4a6b;
+  cursor: pointer;
+}
+
+.stage__item-actions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* 譜面内のピアノロール：紙っぽい色＋青系の音符 */
+.stage .phrase-roll {
+  height: 64px;
+  background:
+    linear-gradient(180deg, rgba(45, 74, 107, 0.05), transparent),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent calc(25% - 1px),
+      rgba(45, 74, 107, 0.12) calc(25% - 1px),
+      rgba(45, 74, 107, 0.12) 25%
+    ),
+    #f7fafc;
+}
+
+.stage .phrase-roll__note {
+  background: #3b6ea5;
+}
+
+.stage .phrase-roll__note.is-editable:hover {
+  background: #4a82bd;
+}
+
+.stage .phrase-roll__note.is-selected {
+  background: #c45c26;
+  box-shadow: 0 0 0 2px rgba(196, 92, 38, 0.4);
+}
+
+.stage .phrase-roll__rest {
+  background: rgba(45, 74, 107, 0.35);
+}
+
+.stage__editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #2d4a6b;
+  color: #eef3f9;
+  border-radius: 6px;
+}
+
+.stage__editor-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.stage__editor-btns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage__editor-btns button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  background: #c45c26;
+  color: #fff;
+  cursor: pointer;
+}
+
+.stage__editor-hint {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+@media (max-width: 900px) {
+  .stage__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .stage__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}

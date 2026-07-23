@@ -1,0 +1,239 @@
+.dist-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.dist-chart__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.dist-chart__preset {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(20, 28, 24, 0.2);
+  background: #fff;
+  color: #1d2620;
+  cursor: pointer;
+}
+
+.dist-chart__preset.is-active {
+  background: #2f6f4e;
+  border-color: #2f6f4e;
+  color: #fff;
+}
+
+.dist-chart__custom-badge {
+  font-size: 0.75rem;
+  color: #c45c26;
+  font-weight: 600;
+}
+
+.dist-chart__sliders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-end;
+}
+
+.dist-chart__sliders label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5a655c;
+}
+
+.dist-chart__center-pick {
+  display: flex;
+  gap: 6px;
+}
+
+.dist-chart__center-pick select {
+  font: inherit;
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #1d2620;
+  padding: 6px 8px;
+  border: 1px solid rgba(20, 28, 24, 0.2);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.dist-chart__col.is-center .dist-chart__label {
+  font-weight: 700;
+  color: #c45c26;
+}
+
+.dist-chart__bar.is-center-bar {
+  box-shadow: 0 0 0 2px rgba(196, 92, 38, 0.45);
+}
+
+.dist-chart__label.is-center-label {
+  font-weight: 700;
+}
+
+.dist-chart__sliders select {
+  padding: 6px 8px;
+  border: 1px solid rgba(20, 28, 24, 0.2);
+  border-radius: 4px;
+  background: #fff;
+  min-width: 110px;
+}
+
+.dist-chart__sliders input[type='range'] {
+  width: 140px;
+}
+
+.dist-chart__check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.85rem !important;
+  color: #1d2620 !important;
+  cursor: pointer;
+  padding-bottom: 6px;
+}
+
+.dist-chart__check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2f6f4e;
+}
+
+.dist-chart__plot-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dist-chart__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 260px;
+  padding: 4px 4px 0;
+  background: rgba(20, 28, 24, 0.04);
+  border-radius: 6px;
+  touch-action: none;
+  user-select: none;
+}
+
+.dist-chart__names {
+  display: flex;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.dist-chart__names .dist-chart__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.dist-chart__col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.dist-chart__track {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.dist-chart__pct {
+  font-size: 0.58rem;
+  line-height: 1;
+  color: #5a655c;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.dist-chart__col.is-center .dist-chart__pct {
+  color: #c45c26;
+  font-weight: 700;
+}
+
+.dist-chart__bar {
+  width: 100%;
+  max-width: 28px;
+  border: none;
+  border-radius: 3px 3px 0 0;
+  cursor: ns-resize;
+  padding: 0;
+  min-height: 3px;
+  align-self: flex-end;
+}
+
+.dist-chart__bar.is-in-scale {
+  background: #2f6f4e;
+}
+
+.dist-chart__bar.is-out-of-scale {
+  background: #9aa89c;
+}
+
+.dist-chart__bar:hover {
+  filter: brightness(1.08);
+}
+
+.dist-chart__label {
+  font-size: 0.62rem;
+  color: #3a443c;
+  writing-mode: horizontal-tb;
+  text-align: center;
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dist-chart__label.is-out {
+  color: #8a958c;
+}
+
+.dist-chart__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #5a655c;
+}
+
+@media (max-width: 640px) {
+  .dist-chart__bars {
+    height: 200px;
+    gap: 2px;
+  }
+
+  .dist-chart__names {
+    gap: 2px;
+  }
+
+  .dist-chart__label {
+    font-size: 0.55rem;
+  }
+
+  .dist-chart__pct {
+    font-size: 0.5rem;
+  }
+}

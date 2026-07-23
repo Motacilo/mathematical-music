@@ -1,0 +1,128 @@
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.app__header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.app__brand {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.app__header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.app__lead {
+  margin: 4px 0 0;
+  max-width: 40rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.app__section {
+  background: var(--surface);
+  border: 1px solid rgba(29, 38, 32, 0.1);
+  border-radius: 8px;
+  padding: 18px 18px 20px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+.app__section h2 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.app__section-meta {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.app__section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.app__section-head h2 {
+  margin: 0;
+}
+
+.app__score-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app__score-actions .btn {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 7px 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(45, 74, 107, 0.28);
+  background: #fff;
+  color: #2d4a6b;
+  cursor: pointer;
+}
+
+.app__score-actions .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.app__score-actions .btn--score {
+  background: #2d4a6b;
+  border-color: #2d4a6b;
+  color: #fff;
+}
+
+.app__score-actions .btn:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.app__section--score {
+  background:
+    linear-gradient(160deg, #e8eef6 0%, #f4f7fb 55%, #eef3f9 100%);
+  border-color: rgba(45, 74, 107, 0.22);
+}
+
+.app__section--score h2 {
+  color: #2d4a6b;
+}
+
+@media (max-width: 640px) {
+  .app {
+    padding: 20px 14px 48px;
+    gap: 20px;
+  }
+
+  .app__section {
+    padding: 14px;
+  }
+}

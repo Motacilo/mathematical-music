@@ -1,0 +1,55 @@
+.phrase-roll {
+  width: 100%;
+  height: 72px;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(20, 28, 24, 0.04), transparent),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent calc(25% - 1px),
+      rgba(20, 28, 24, 0.08) calc(25% - 1px),
+      rgba(20, 28, 24, 0.08) 25%
+    ),
+    #e8efe8;
+  position: relative;
+  overflow: hidden;
+}
+
+.phrase-roll__grid {
+  position: absolute;
+  inset: 6px 4px;
+}
+
+.phrase-roll__note {
+  position: absolute;
+  height: 14%;
+  min-height: 8px;
+  border: none;
+  border-radius: 2px;
+  background: #2f6f4e;
+  transform: translateY(-50%);
+  cursor: default;
+  padding: 0;
+}
+
+.phrase-roll__note.is-editable {
+  cursor: pointer;
+}
+
+.phrase-roll__note.is-editable:hover {
+  background: #3d8a62;
+}
+
+.phrase-roll__note.is-selected {
+  background: #c45c26;
+  box-shadow: 0 0 0 2px rgba(196, 92, 38, 0.35);
+}
+
+.phrase-roll__rest {
+  position: absolute;
+  top: 40%;
+  height: 2px;
+  background: rgba(20, 28, 24, 0.25);
+  border-radius: 1px;
+}

@@ -1,0 +1,59 @@
+.candidate-pool {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.candidate-pool--empty {
+  display: block;
+  padding: 28px 20px;
+  color: #5a655c;
+  background: rgba(20, 28, 24, 0.03);
+  border: 1px dashed rgba(20, 28, 24, 0.18);
+  border-radius: 6px;
+}
+
+.candidate-card {
+  background: #f4f7f3;
+  border: 1px solid rgba(20, 28, 24, 0.1);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.candidate-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #3a443c;
+}
+
+.candidate-card__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.candidate-card__actions button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(20, 28, 24, 0.2);
+  background: #fff;
+  color: #1d2620;
+  cursor: pointer;
+}
+
+.candidate-card__actions button.primary {
+  background: #2f6f4e;
+  border-color: #2f6f4e;
+  color: #fff;
+}
+
+.candidate-card__actions button:hover {
+  filter: brightness(0.97);
+}
