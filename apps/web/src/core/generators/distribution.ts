@@ -13,7 +13,12 @@ export function generateDistributionPhrase(
   settings: ProjectSettings,
   params: DistributionParams,
 ): Phrase {
-  const slots = resolveRhythmSlots(settings.rhythmId, settings.restProbability)
+  const bars = Math.min(4, Math.max(1, settings.barCount || 1))
+  const slots = resolveRhythmSlots(
+    settings.rhythmId,
+    settings.restProbability,
+    bars,
+  )
   const pitches = getDistributionPitches(params.centerMidi, params.halfRange)
   const notes: Note[] = []
 
@@ -40,7 +45,7 @@ export function generateDistributionPhrase(
   return {
     id: uid(),
     notes,
-    bars: 1,
+    bars,
     bpm: settings.bpm,
     keyRoot: settings.keyRoot,
     scale: settings.scale,

@@ -31,14 +31,31 @@ export function PhraseRoll({
     pitchMax ?? (pitches.length ? Math.max(...pitches) + 2 : 72)
   const range = Math.max(1, maxP - minP)
 
-  let beat = 0
-  const totalBeats = phrase.notes.reduce(
-    (s, n) => s + DURATION_BEATS[n.duration],
-    0,
+  const bars = Math.max(1, phrase.bars || 1)
+  const totalBeats = Math.max(
+    1,
+    phrase.notes.reduce((s, n) => s + DURATION_BEATS[n.duration], 0),
   )
+  const beatPct = 100 / totalBeats
+
+  let beat = 0
 
   return (
-    <div className="phrase-roll" role="img" aria-label="フレーズ">
+    <div
+      className={`phrase-roll${bars > 1 ? ' phrase-roll--multi' : ''}`}
+      role="img"
+      aria-label={`${bars}小節のフレーズ`}
+      style={{ ['--beat-pct' as string]: `${beatPct}%` }}
+    >
+      {bars > 1 &&
+        Array.from({ length: bars - 1 }, (_, i) => (
+          <div
+            key={`bar-${i}`}
+            className="phrase-roll__barline"
+            style={{ left: `${((i + 1) / bars) * 100}%` }}
+            aria-hidden
+          />
+        ))}
       <div className="phrase-roll__grid">
         {phrase.notes.map((note, i) => {
           const w = (DURATION_BEATS[note.duration] / totalBeats) * 100

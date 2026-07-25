@@ -1,5 +1,5 @@
 import type { ScaleType } from './types'
-import { getScaleIntervals, KEY_NAMES } from './scale'
+import { getScaleIntervals, KEY_NAMES, KEY_SOLFEGE } from './scale'
 
 export const MIN_HALF_RANGE = 4
 export const MAX_HALF_RANGE = 18
@@ -42,6 +42,12 @@ export function pitchLabel(midi: number): string {
   const name = KEY_NAMES[((midi % 12) + 12) % 12]!
   const oct = Math.floor(midi / 12) - 1
   return `${name}${oct}`
+}
+
+export function pitchLabelWithSolfege(midi: number): string {
+  const i = ((midi % 12) + 12) % 12
+  const oct = Math.floor(midi / 12) - 1
+  return `${KEY_NAMES[i]}${oct} (${KEY_SOLFEGE[i]})`
 }
 
 export function isPitchInScale(

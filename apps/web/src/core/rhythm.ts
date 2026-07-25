@@ -99,8 +99,7 @@ export function buildMixedSlots(
   return slots
 }
 
-/** Resolve rhythm slots for generation (mixed is randomized each call). */
-export function resolveRhythmSlots(
+function resolveOneBar(
   rhythmId: RhythmId,
   restProbabilityPercent: number,
 ): RhythmSlot[] {
@@ -113,6 +112,28 @@ export function resolveRhythmSlots(
     return applyRandomRests(fixed, restProbabilityPercent)
   }
   return applyRandomRests(FIXED_TEMPLATES.eighths!, restProbabilityPercent)
+}
+
+/** Resolve rhythm slots for generation (mixed is randomized each bar). */
+export function resolveRhythmSlots(
+  rhythmId: RhythmId,
+  restProbabilityPercent: number,
+  barCount = 1,
+): RhythmSlot[] {
+  const bars = Math.min(4, Math.max(1, Math.round(barCount)))
+  if (bars === 1) {
+    return resolveOneBar(rhythmId, restProbabilityPercent)
+  }
+  const out: RhythmSlot[] = []
+  for (let i = 0; i < bars; i++) {
+    out.push(...resolveOneBar(rhythmId, restProbabilityPercent))
+  }
+  return out
+}
+
+export function clampBarCount(n: number): 1 | 2 | 3 | 4 {
+  const v = Math.min(4, Math.max(1, Math.round(n)))
+  return v as 1 | 2 | 3 | 4
 }
 
 export function countSoundingSlots(slots: RhythmSlot[]): number {

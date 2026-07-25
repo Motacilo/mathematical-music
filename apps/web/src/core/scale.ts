@@ -18,6 +18,36 @@ export const KEY_NAMES = [
   'B',
 ] as const
 
+/** Fixed-do solfege (ドレミ) aligned with KEY_NAMES */
+export const KEY_SOLFEGE = [
+  'ド',
+  'ド♯',
+  'レ',
+  'ミ♭',
+  'ミ',
+  'ファ',
+  'ファ♯',
+  'ソ',
+  'ラ♭',
+  'ラ',
+  'シ♭',
+  'シ',
+] as const
+
+export function keyOptionLabel(pc: number): string {
+  const i = ((pc % 12) + 12) % 12
+  return `${KEY_NAMES[i]} (${KEY_SOLFEGE[i]})`
+}
+
+/** Octave select label: extremes annotated as low/high */
+export function octaveOptionLabel(octave: number): string {
+  if (octave <= 2) return `${octave} (低音)`
+  if (octave >= 6) return `${octave} (高音)`
+  return String(octave)
+}
+
+export const OCTAVE_OPTIONS = [2, 3, 4, 5, 6] as const
+
 export function getScaleIntervals(scale: ScaleType): number[] {
   return scale === 'major' ? MAJOR_INTERVALS : MINOR_INTERVALS
 }
@@ -101,9 +131,9 @@ export function shiftDegree(
 }
 
 export function midiToNoteName(midi: number): string {
-  const name = KEY_NAMES[((midi % 12) + 12) % 12]!
+  const i = ((midi % 12) + 12) % 12
   const oct = Math.floor(midi / 12) - 1
-  return `${name}${oct}`
+  return `${KEY_NAMES[i]}${oct} (${KEY_SOLFEGE[i]})`
 }
 
 export function getScaleMidiRange(

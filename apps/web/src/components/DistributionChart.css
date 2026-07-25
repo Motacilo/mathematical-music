@@ -12,6 +12,14 @@
   align-items: center;
 }
 
+.dist-chart__presets-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5a655c;
+  margin-right: 4px;
+}
+
 .dist-chart__preset {
   font: inherit;
   font-size: 0.8rem;

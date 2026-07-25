@@ -19,7 +19,8 @@ export interface Note {
 export interface Phrase {
   id: string
   notes: Note[]
-  bars: 1
+  /** Length in bars (1–4) */
+  bars: number
   /** Snapshot at generation time */
   bpm: number
   keyRoot: number
@@ -36,6 +37,9 @@ export type RhythmId =
   | 'mixed_16_4'
   | 'mixed_16_8_4'
 
+/** How many bars each generated candidate spans */
+export type BarCount = 1 | 2 | 3 | 4
+
 export interface ProjectSettings {
   keyRoot: number
   scale: ScaleType
@@ -43,6 +47,8 @@ export interface ProjectSettings {
   octave: number
   rhythmId: RhythmId
   candidateCount: number
+  /** Bars per generated candidate (1–4) */
+  barCount: BarCount
   /** 0–100: chance each slot becomes a rest */
   restProbability: number
 }

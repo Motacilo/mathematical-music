@@ -2,9 +2,10 @@ import { Midi } from '@tonejs/midi'
 import { DURATION_BEATS } from '../core/rhythm'
 import type { Phrase } from '../core/types'
 
-export function buildMidiBlob(phrases: Phrase[], bpm: number): Blob {
+export function buildMidiBlob(phrases: Phrase[]): Blob {
   const midi = new Midi()
-  midi.header.setTempo(bpm)
+  const firstBpm = phrases[0]?.bpm ?? 120
+  midi.header.setTempo(firstBpm)
   midi.header.timeSignatures.push({
     ticks: 0,
     timeSignature: [4, 4],
@@ -17,8 +18,13 @@ export function buildMidiBlob(phrases: Phrase[], bpm: number): Blob {
 
   const ppq = midi.header.ppq
   let tick = 0
+  let lastBpm = firstBpm
 
   for (const phrase of phrases) {
+    if (phrase.bpm !== lastBpm) {
+      midi.header.tempos.push({ ticks: tick, bpm: phrase.bpm })
+      lastBpm = phrase.bpm
+    }
     for (const note of phrase.notes) {
       const durationTicks = Math.round(DURATION_BEATS[note.duration] * ppq)
       if (!note.rest) {
@@ -37,8 +43,11 @@ export function buildMidiBlob(phrases: Phrase[], bpm: number): Blob {
   return new Blob([bytes], { type: 'audio/midi' })
 }
 
-export function downloadMidi(phrases: Phrase[], bpm: number, filename = 'melody.mid'): void {
-  const blob = buildMidiBlob(phrases, bpm)
+export function downloadMidi(
+  phrases: Phrase[],
+  filename = 'melody.mid',
+): void {
+  const blob = buildMidiBlob(phrases)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

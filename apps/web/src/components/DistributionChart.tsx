@@ -6,12 +6,13 @@ import {
   isPitchInScale,
   normalizeWeights,
   pitchLabel,
+  pitchLabelWithSolfege,
   presetUsesSigma,
   remapWeightsForRange,
   weightsFromPreset,
   type DistPresetId,
 } from '../core/distributionWeights'
-import { KEY_NAMES } from '../core/scale'
+import { KEY_NAMES, OCTAVE_OPTIONS, keyOptionLabel, octaveOptionLabel } from '../core/scale'
 import type { DistributionParams, ScaleType } from '../core/types'
 import './DistributionChart.css'
 
@@ -190,6 +191,7 @@ export function DistributionChart({
   return (
     <div className="dist-chart">
       <div className="dist-chart__presets">
+        <span className="dist-chart__presets-label">形のプリセット</span>
         {(Object.keys(PRESET_LABELS) as Exclude<DistPresetId, 'custom'>[]).map(
           (id) => (
             <button
@@ -203,35 +205,37 @@ export function DistributionChart({
           ),
         )}
         {distribution.activePreset === 'custom' && (
-          <span className="dist-chart__custom-badge">カスタム</span>
+          <span className="dist-chart__custom-badge">カスタム（棒を編集済み）</span>
         )}
       </div>
 
       <div className="dist-chart__sliders">
         <label>
           中心音
-          <span className="dist-chart__center-pick">
-            <select
-              value={centerPc}
-              onChange={(e) => setCenterPc(Number(e.target.value))}
-            >
-              {KEY_NAMES.map((name, i) => (
-                <option key={name} value={i}>
-                  {name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={centerOct}
-              onChange={(e) => setCenterOct(Number(e.target.value))}
-            >
-              {[2, 3, 4, 5, 6].map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-          </span>
+          <select
+            value={centerPc}
+            onChange={(e) => setCenterPc(Number(e.target.value))}
+          >
+            {KEY_NAMES.map((name, i) => (
+              <option key={name} value={i}>
+                {keyOptionLabel(i)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          音の高さ
+          <select
+            value={centerOct}
+            onChange={(e) => setCenterOct(Number(e.target.value))}
+          >
+            {OCTAVE_OPTIONS.map((o) => (
+              <option key={o} value={o}>
+                {octaveOptionLabel(o)}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label>
@@ -312,8 +316,8 @@ export function DistributionChart({
                     type="button"
                     className={`dist-chart__bar${inScale ? ' is-in-scale' : ' is-out-of-scale'}${isCenter ? ' is-center-bar' : ''}`}
                     style={{ height: `${Math.max(h, w > 0 ? 1.5 : 0)}%` }}
-                    title={`${pitchLabel(midi)}${isCenter ? '（中心）' : ''}: ${pct.toFixed(1)}%`}
-                    aria-label={`${pitchLabel(midi)} の確率 ${pct.toFixed(1)}パーセント`}
+                    title={`${pitchLabelWithSolfege(midi)}${isCenter ? '（中心）' : ''}: ${pct.toFixed(1)}%`}
+                    aria-label={`${pitchLabelWithSolfege(midi)} の確率 ${pct.toFixed(1)}パーセント`}
                     onPointerDown={(e) => onPointerDown(i, e)}
                   />
                 </div>
@@ -338,7 +342,8 @@ export function DistributionChart({
       </div>
 
       <p className="dist-chart__hint">
-        「キー外の音を 0%」をオンにすると、プリセット適用時にキー内の音だけになります（カスタムの棒は変更しません）。
+        棒の上の数字は選ばれる確率（%）。棒を上下ドラッグで変えられます。薄い色はキー外の音です。「キー外の音を
+        0%」オン時、プリセット適用でキー内だけになります（カスタムの棒はそのまま）。
       </p>
     </div>
   )

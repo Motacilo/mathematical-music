@@ -46,7 +46,12 @@ export function generateSequencePhrase(
   settings: ProjectSettings,
   params: SequenceParams,
 ): Phrase {
-  const slots = resolveRhythmSlots(settings.rhythmId, settings.restProbability)
+  const bars = Math.min(4, Math.max(1, settings.barCount || 1))
+  const slots = resolveRhythmSlots(
+    settings.rhythmId,
+    settings.restProbability,
+    bars,
+  )
   const pitches = buildSequencePitchRange(
     params.rangeLowMidi,
     params.rangeHighMidi,
@@ -87,7 +92,7 @@ export function generateSequencePhrase(
   return {
     id: uid(),
     notes,
-    bars: 1,
+    bars,
     bpm: settings.bpm,
     keyRoot: settings.keyRoot,
     scale: settings.scale,

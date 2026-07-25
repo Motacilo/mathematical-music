@@ -7,18 +7,34 @@
     repeating-linear-gradient(
       90deg,
       transparent,
-      transparent calc(25% - 1px),
-      rgba(20, 28, 24, 0.08) calc(25% - 1px),
-      rgba(20, 28, 24, 0.08) 25%
+      transparent calc(var(--beat-pct, 25%) - 1px),
+      rgba(20, 28, 24, 0.07) calc(var(--beat-pct, 25%) - 1px),
+      rgba(20, 28, 24, 0.07) var(--beat-pct, 25%)
     ),
     #e8efe8;
   position: relative;
   overflow: hidden;
 }
 
+.phrase-roll--multi {
+  height: 88px;
+}
+
+.phrase-roll__barline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(20, 28, 24, 0.28);
+  z-index: 1;
+  pointer-events: none;
+}
+
 .phrase-roll__grid {
   position: absolute;
   inset: 6px 4px;
+  z-index: 2;
 }
 
 .phrase-roll__note {

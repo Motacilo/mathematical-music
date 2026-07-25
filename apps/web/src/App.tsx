@@ -2,18 +2,21 @@ import { useCallback, useState } from 'react'
 import { playPhrase, playPhrases, stopPlayback } from './audio/player'
 import { CandidatePool } from './components/CandidatePool'
 import { Controls } from './components/Controls'
+import { SectionTuneBar } from './components/SectionTuneBar'
 import { Stage } from './components/Stage'
-import { generateCandidates } from './core/generators'
+import { generateCandidates, maxCandidateCount } from './core/generators'
+import { splitPhraseIntoBars } from './core/phraseSplit'
+import {
+  applyBpmToPhrases,
+  transposePhrase,
+  transposePhrases,
+} from './core/transpose'
 import {
   centerMidiForKeyTonic,
   weightsFromPreset,
 } from './core/distributionWeights'
 import { createDefaultDistribution, createDefaultSequence } from './core/types'
-import type {
-  GenMode,
-  Phrase,
-  ProjectSettings,
-} from './core/types'
+import type { GenMode, Phrase, ProjectSettings } from './core/types'
 import { downloadMidi } from './export/midi'
 import { downloadWav } from './export/wav'
 import './App.css'
@@ -22,10 +25,7 @@ const DEFAULT_BPM = 160
 const DEFAULT_REST_PROB = 0
 
 function defaultCandidateCount(): number {
-  if (typeof window === 'undefined') return 8
-  // タッチ端末は PC レイアウトでも候補数デフォルト 4
-  const isTouch = window.matchMedia('(pointer: coarse)').matches
-  return isTouch ? 4 : 8
+  return 8
 }
 
 const initialSettingsBase: Omit<ProjectSettings, 'candidateCount'> = {
@@ -34,15 +34,15 @@ const initialSettingsBase: Omit<ProjectSettings, 'candidateCount'> = {
   bpm: DEFAULT_BPM,
   octave: 4,
   rhythmId: 'eighths',
+  barCount: 1,
   restProbability: DEFAULT_REST_PROB,
 }
 
-function clonePhrase(phrase: Phrase): Phrase {
-  return {
-    ...phrase,
-    id: `ph_${Math.random().toString(36).slice(2, 10)}`,
-    notes: phrase.notes.map((n) => ({ ...n })),
-  }
+function parsePositiveBpm(raw: string, fallback: number): number {
+  const trimmed = raw.trim()
+  const n = Number(trimmed)
+  if (trimmed === '' || !Number.isFinite(n) || n <= 0) return fallback
+  return Math.round(n)
 }
 
 export default function App() {
@@ -72,15 +72,16 @@ export default function App() {
     String(DEFAULT_REST_PROB),
   )
 
+  const [candidateKeyRoot, setCandidateKeyRoot] = useState(
+    initialSettingsBase.keyRoot,
+  )
+  const [candidateBpm, setCandidateBpm] = useState(DEFAULT_BPM)
+  const [candidateBpmInput, setCandidateBpmInput] = useState(
+    String(DEFAULT_BPM),
+  )
+
   const resolveBpm = useCallback((): number => {
-    const trimmed = bpmInput.trim()
-    const n = Number(trimmed)
-    if (trimmed === '' || !Number.isFinite(n) || n <= 0) {
-      setBpmInput(String(DEFAULT_BPM))
-      setSettings((s) => ({ ...s, bpm: DEFAULT_BPM }))
-      return DEFAULT_BPM
-    }
-    const bpm = Math.round(n)
+    const bpm = parsePositiveBpm(bpmInput, DEFAULT_BPM)
     setBpmInput(String(bpm))
     setSettings((s) => ({ ...s, bpm }))
     return bpm
@@ -103,14 +104,16 @@ export default function App() {
   const onGenerate = useCallback(() => {
     const bpm = resolveBpm()
     const restProbability = resolveRestProbability()
-    setCandidates(
-      generateCandidates(
-        mode,
-        { ...settings, bpm, restProbability },
-        distribution,
-        sequence,
-      ),
+    const next = generateCandidates(
+      mode,
+      { ...settings, bpm, restProbability },
+      distribution,
+      sequence,
     )
+    setCandidates(next)
+    setCandidateKeyRoot(settings.keyRoot)
+    setCandidateBpm(bpm)
+    setCandidateBpmInput(String(bpm))
   }, [
     mode,
     settings,
@@ -120,8 +123,46 @@ export default function App() {
     resolveRestProbability,
   ])
 
+  const onCandidateKeyChange = useCallback((nextKey: number) => {
+    setCandidates((prev) => {
+      if (prev.length === 0) return prev
+      const from = prev[0]!.keyRoot
+      return transposePhrases(prev, from, nextKey)
+    })
+    setCandidateKeyRoot(nextKey)
+  }, [])
+
+  const commitCandidateBpm = useCallback(() => {
+    const bpm = parsePositiveBpm(candidateBpmInput, candidateBpm)
+    setCandidateBpmInput(String(bpm))
+    setCandidateBpm(bpm)
+    setCandidates((prev) =>
+      prev.length === 0 ? prev : applyBpmToPhrases(prev, bpm),
+    )
+  }, [candidateBpmInput, candidateBpm])
+
   const onAdd = useCallback((phrase: Phrase) => {
-    setStage((prev) => [...prev, clonePhrase(phrase)])
+    setStage((prev) => [...prev, ...splitPhraseIntoBars(phrase)])
+  }, [])
+
+  const onPhraseKeyChange = useCallback(
+    (phraseIndex: number, nextKey: number) => {
+      setStage((prev) =>
+        prev.map((ph, i) => {
+          if (i !== phraseIndex) return ph
+          const delta = ((nextKey - ph.keyRoot) % 12 + 12) % 12
+          const signed = delta > 6 ? delta - 12 : delta
+          return transposePhrase(ph, signed, nextKey)
+        }),
+      )
+    },
+    [],
+  )
+
+  const onPhraseBpmChange = useCallback((phraseIndex: number, bpm: number) => {
+    setStage((prev) =>
+      prev.map((ph, i) => (i === phraseIndex ? { ...ph, bpm } : ph)),
+    )
   }, [])
 
   const onChangePitch = useCallback(
@@ -133,8 +174,10 @@ export default function App() {
             ...ph,
             notes: ph.notes.map((n, ni) => {
               if (ni !== noteIndex || n.rest) return n
-              // Chromatic step so out-of-key notes stay editable
-              return { ...n, pitch: n.pitch + delta }
+              return {
+                ...n,
+                pitch: Math.max(0, Math.min(127, n.pitch + delta)),
+              }
             }),
           }
         }),
@@ -178,12 +221,12 @@ export default function App() {
   const handlePlayAll = async () => {
     if (stage.length === 0) return
     setPlaying(true)
-    await playPhrases(stage, settings.bpm, () => setPlaying(false))
+    await playPhrases(stage, () => setPlaying(false))
   }
 
   const handlePreview = async (phrase: Phrase) => {
     setPlaying(true)
-    await playPhrase(phrase, phrase.bpm, () => setPlaying(false))
+    await playPhrase(phrase, () => setPlaying(false))
   }
 
   const handleStop = async () => {
@@ -193,14 +236,14 @@ export default function App() {
 
   const handleMidi = () => {
     if (stage.length === 0) return
-    downloadMidi(stage, settings.bpm)
+    downloadMidi(stage)
   }
 
   const handleWav = async () => {
     if (stage.length === 0) return
     setExporting(true)
     try {
-      await downloadWav(stage, settings.bpm)
+      await downloadWav(stage)
     } finally {
       setExporting(false)
     }
@@ -212,9 +255,23 @@ export default function App() {
         <p className="app__brand">Mathematical Music</p>
         <h1>メロディ組み立て</h1>
         <p className="app__lead">
-          1小節フレーズを生成し、譜面に並べてメロディをつくります。MIDI / WAV
-          で書き出せます。
+          作曲が苦手でも、最大4小節までのフレーズを作って並べるだけでメロディになります。完成したら
+          MIDI / WAV で書き出せます。
         </p>
+        <ol className="app__steps">
+          <li>
+            <span className="app__step-num">1</span>
+            キー・小節数・リズムなどを選んで「生成」
+          </li>
+          <li>
+            <span className="app__step-num">2</span>
+            候補を「聴く」→気に入ったら「譜面へ」
+          </li>
+          <li>
+            <span className="app__step-num">3</span>
+            譜面で並べ替え・音の高さ調整 → 再生 / 書き出し
+          </li>
+        </ol>
       </header>
 
       <section className="app__section">
@@ -231,6 +288,12 @@ export default function App() {
           onSettingsChange={(patch) => {
             setSettings((s) => {
               const next = { ...s, ...patch }
+              if (typeof patch.barCount === 'number') {
+                const max = maxCandidateCount(patch.barCount)
+                if (next.candidateCount > max) {
+                  next.candidateCount = max
+                }
+              }
               if (typeof patch.keyRoot === 'number') {
                 setDistribution((d) => {
                   const centerMidi = centerMidiForKeyTonic(
@@ -273,12 +336,21 @@ export default function App() {
       <section className="app__section">
         <h2>
           候補フレーズ
-          {candidates.length > 0 && (
-            <span className="app__section-meta">
-              BPM {candidates[0]!.bpm}
-            </span>
-          )}
+          <span className="app__section-meta">{settings.barCount}小節</span>
         </h2>
+        <SectionTuneBar
+          keyRoot={candidateKeyRoot}
+          bpmInput={candidateBpmInput}
+          disabled={candidates.length === 0}
+          onKeyChange={onCandidateKeyChange}
+          onBpmInputChange={setCandidateBpmInput}
+          onBpmCommit={commitCandidateBpm}
+        />
+        {candidates.length === 0 && (
+          <p className="app__section-lead">
+            「生成」の結果がここに出ます。聴いて選んで、譜面へ追加しましょう。
+          </p>
+        )}
         <CandidatePool
           candidates={candidates}
           onPreview={handlePreview}
@@ -288,7 +360,15 @@ export default function App() {
 
       <section className="app__section app__section--score">
         <div className="app__section-head">
-          <h2>譜面</h2>
+          <div>
+            <h2>譜面</h2>
+            {stage.length === 0 && (
+              <p className="app__section-lead app__section-lead--score">
+                選んだフレーズを並べてメロディにします。再生・MIDI・WAV
+                はここから。
+              </p>
+            )}
+          </div>
           <div className="app__score-actions">
             {playing ? (
               <button type="button" className="btn" onClick={handleStop}>
@@ -329,6 +409,12 @@ export default function App() {
           onChangePitch={onChangePitch}
           onRemove={onRemove}
           onMove={onMove}
+          onPhraseKeyChange={onPhraseKeyChange}
+          onPhraseBpmChange={onPhraseBpmChange}
+          onPlayPhrase={(pi) => {
+            const phrase = stage[pi]
+            if (phrase) void handlePreview(phrase)
+          }}
         />
       </section>
     </div>

@@ -1,3 +1,10 @@
+/* 候補エリア自身の幅で列数を決める */
+.candidate-pool-wrap {
+  container-type: inline-size;
+  container-name: candidates;
+  width: 100%;
+}
+
 .candidate-pool {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -11,6 +18,27 @@
   background: rgba(20, 28, 24, 0.03);
   border: 1px dashed rgba(20, 28, 24, 0.18);
   border-radius: 6px;
+  line-height: 1.5;
+}
+
+.candidate-pool--empty p {
+  margin: 0 0 8px;
+  max-width: 36rem;
+}
+
+.candidate-pool--empty p:last-child {
+  margin-bottom: 0;
+}
+
+.candidate-pool__empty-title {
+  font-weight: 600;
+  color: #1d2620;
+  font-size: 0.95rem;
+}
+
+.candidate-pool__empty-tip {
+  font-size: 0.85rem;
+  opacity: 0.9;
 }
 
 .candidate-card {
@@ -22,10 +50,17 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  grid-column: span 1;
+}
+
+/* 同じ列数のグリッド上で 2 スロット分の幅にする */
+.candidate-card--wide {
+  grid-column: span 2;
 }
 
 .candidate-card__head {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
@@ -33,10 +68,15 @@
   color: #3a443c;
 }
 
+.candidate-card__label {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .candidate-card__actions {
   display: flex;
-  gap: 4px;
   flex-shrink: 0;
+  gap: 4px;
 }
 
 .candidate-card__actions button {
@@ -48,6 +88,7 @@
   background: #fff;
   color: #1d2620;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .candidate-card__actions button.primary {
@@ -60,8 +101,8 @@
   filter: brightness(0.97);
 }
 
-/* PC表示相当の幅でも、タッチ端末は最大4列 */
-@media (min-width: 700px) {
+/* 4 スロット: 1枠×4 / 2枠×2 */
+@container candidates (min-width: 640px) {
   .candidate-pool {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
@@ -77,13 +118,11 @@
   }
 }
 
-@media (min-width: 1100px) and (pointer: fine) {
-  .candidate-pool {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1400px) and (pointer: fine) {
+/*
+  8 スロットは「候補1・聴く・譜面へ」が1行に収まる幅だけ。
+  目安: 1枠あたり約 180px × 8 + gap ≈ 1520px
+*/
+@container candidates (min-width: 1520px) {
   .candidate-pool {
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }

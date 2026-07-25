@@ -50,31 +50,28 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   return new Blob([arrayBuffer], { type: 'audio/wav' })
 }
 
-function totalDurationSec(phrases: Phrase[], bpm: number): number {
-  const beatSec = 60 / bpm
-  let beats = 0
+function totalDurationSec(phrases: Phrase[]): number {
+  let sec = 0
   for (const phrase of phrases) {
+    const beatSec = 60 / Math.max(1, phrase.bpm)
     for (const note of phrase.notes) {
-      beats += DURATION_BEATS[note.duration]
+      sec += DURATION_BEATS[note.duration] * beatSec
     }
   }
-  return Math.max(0.5, beats * beatSec + 0.35)
+  return Math.max(0.5, sec + 0.35)
 }
 
-export async function renderWavBlob(
-  phrases: Phrase[],
-  bpm: number,
-): Promise<Blob> {
-  const duration = totalDurationSec(phrases, bpm)
+export async function renderWavBlob(phrases: Phrase[]): Promise<Blob> {
+  const duration = totalDurationSec(phrases)
   const rendered = await Tone.Offline(() => {
     const synth = new Tone.Synth({
       oscillator: { type: 'triangle' },
       envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.25 },
     }).toDestination()
 
-    const beatSec = 60 / bpm
     let t = 0
     for (const phrase of phrases) {
+      const beatSec = 60 / Math.max(1, phrase.bpm)
       for (const note of phrase.notes) {
         const durSec = DURATION_BEATS[note.duration] * beatSec
         if (!note.rest) {
@@ -96,10 +93,9 @@ export async function renderWavBlob(
 
 export async function downloadWav(
   phrases: Phrase[],
-  bpm: number,
   filename = 'melody.wav',
 ): Promise<void> {
-  const blob = await renderWavBlob(phrases, bpm)
+  const blob = await renderWavBlob(phrases)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

@@ -1,4 +1,9 @@
-import { KEY_NAMES } from '../core/scale'
+import {
+  KEY_NAMES,
+  OCTAVE_OPTIONS,
+  keyOptionLabel,
+  octaveOptionLabel,
+} from '../core/scale'
 import { RHYTHM_LABELS } from '../core/rhythm'
 import { validateExpr, looksLikeExpression } from '../core/expr'
 import {
@@ -7,6 +12,7 @@ import {
   buildSequencePitchRange,
 } from '../core/sequenceRange'
 import type {
+  BarCount,
   DistributionParams,
   GenMode,
   ProjectSettings,
@@ -15,6 +21,7 @@ import type {
   SequenceParams,
 } from '../core/types'
 import { DistributionChart } from './DistributionChart'
+import { maxCandidateCount } from '../core/generators'
 import './Controls.css'
 
 interface ControlsProps {
@@ -48,8 +55,19 @@ export function Controls({
   onSequenceChange,
   onGenerate,
 }: ControlsProps) {
+  const maxCandidates = maxCandidateCount(settings.barCount)
+  const candidateOptions = Array.from({ length: maxCandidates }, (_, i) => i + 1)
+  const candidateValue = Math.min(maxCandidates, settings.candidateCount)
+
   return (
     <div className="controls">
+      <div className="controls__intro">
+        <h2 className="controls__title">設定</h2>
+        <p className="controls__intro-text">
+          まずモードとキーを選び、「生成」で候補フレーズを作ります。気に入ったものを譜面へ並べてメロディにしましょう。
+        </p>
+      </div>
+
       <div className="controls__row">
         <label>
           モード
@@ -57,13 +75,13 @@ export function Controls({
             value={mode}
             onChange={(e) => onModeChange(e.target.value as GenMode)}
           >
-            <option value="distribution">分布</option>
-            <option value="sequence">数列</option>
+            <option value="distribution">分布（確率で音を選ぶ）</option>
+            <option value="sequence">数列（式・数字で並べる）</option>
           </select>
         </label>
 
         <label>
-          キー
+          キー（主音）
           <select
             value={settings.keyRoot}
             onChange={(e) =>
@@ -72,7 +90,7 @@ export function Controls({
           >
             {KEY_NAMES.map((name, i) => (
               <option key={name} value={i}>
-                {name}
+                {keyOptionLabel(i)}
               </option>
             ))}
           </select>
@@ -86,13 +104,13 @@ export function Controls({
               onSettingsChange({ scale: e.target.value as ScaleType })
             }
           >
-            <option value="major">メジャー</option>
-            <option value="minor">マイナー</option>
+            <option value="major">メジャー（明るい）</option>
+            <option value="minor">マイナー（暗い）</option>
           </select>
         </label>
 
         <label>
-          BPM
+          BPM（速さ）
           <input
             type="text"
             inputMode="numeric"
@@ -107,7 +125,9 @@ export function Controls({
             }}
           />
         </label>
+      </div>
 
+      <div className="controls__row">
         <label>
           リズム
           <select
@@ -125,16 +145,34 @@ export function Controls({
         </label>
 
         <label>
+          小節数
+          <select
+            value={settings.barCount}
+            onChange={(e) =>
+              onSettingsChange({
+                barCount: Number(e.target.value) as BarCount,
+              })
+            }
+          >
+            {([1, 2, 3, 4] as const).map((n) => (
+              <option key={n} value={n}>
+                {n}小節
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
           候補数
           <select
-            value={settings.candidateCount}
+            value={candidateValue}
             onChange={(e) =>
               onSettingsChange({
                 candidateCount: Number(e.target.value),
               })
             }
           >
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            {candidateOptions.map((n) => (
               <option key={n} value={n}>
                 {n}
               </option>
@@ -159,9 +197,17 @@ export function Controls({
           />
         </label>
       </div>
+      <p className="controls__hint controls__hint--top">
+        小節数は1候補の長さ（最大4）。1〜2小節は1枠・候補最大8、3〜4小節は2枠分・候補最大4です。リズムの表記は1小節あたり。BPM
+        は速さ、休符確率は各音符が休符になる割合（0%=なし、100%=全部休符）。
+      </p>
 
       {mode === 'distribution' && (
         <div className="controls__row controls__row--mode controls__row--dist">
+          <p className="controls__mode-lead">
+            <strong>分布モード：</strong>
+            棒の高い音ほど出やすくなります。プリセットを選ぶか、棒をドラッグして確率を変え、「生成」を押してください。
+          </p>
           <DistributionChart
             distribution={distribution}
             keyRoot={settings.keyRoot}
@@ -173,104 +219,112 @@ export function Controls({
 
       {mode === 'sequence' && (
         <div className="controls__row controls__row--mode controls__row--seq">
+          <p className="controls__mode-lead">
+            <strong>数列モード：</strong>
+            <code>n</code> は 0,1,2… と進みます（休符のときは進みません）。例:{' '}
+            <code>n</code>、<code>2*n+1</code>、<code>n^2</code>
+            。カンマ区切りの数字列も使えます。
+          </p>
           <label className="controls__grow">
-            式（n は 0 始まり）またはカンマ区切り
+            式またはカンマ区切りの数字
             <input
               type="text"
               value={sequence.expression}
               onChange={(e) =>
                 onSequenceChange({ expression: e.target.value })
               }
-              placeholder="例: n  /  2*n+1  /  n^2  /  1,3,5,2"
+              placeholder="例: n  /  2*n+1  /  n^2  /  0,2,4,7"
               spellCheck={false}
             />
           </label>
 
           <div className="controls__seq-range">
             <label>
-              下限
-              <span className="controls__note-pick">
-                <select
-                  value={noteOctaveFromMidi(sequence.rangeLowMidi).pc}
-                  onChange={(e) => {
-                    const { octave } = noteOctaveFromMidi(sequence.rangeLowMidi)
-                    onSequenceChange({
-                      rangeLowMidi: midiFromNoteOctave(
-                        Number(e.target.value),
-                        octave,
-                      ),
-                    })
-                  }}
-                >
-                  {KEY_NAMES.map((name, i) => (
-                    <option key={name} value={i}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={noteOctaveFromMidi(sequence.rangeLowMidi).octave}
-                  onChange={(e) => {
-                    const { pc } = noteOctaveFromMidi(sequence.rangeLowMidi)
-                    onSequenceChange({
-                      rangeLowMidi: midiFromNoteOctave(
-                        pc,
-                        Number(e.target.value),
-                      ),
-                    })
-                  }}
-                >
-                  {[1, 2, 3, 4, 5, 6].map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </span>
+              いちばん低い音
+              <select
+                value={noteOctaveFromMidi(sequence.rangeLowMidi).pc}
+                onChange={(e) => {
+                  const { octave } = noteOctaveFromMidi(sequence.rangeLowMidi)
+                  onSequenceChange({
+                    rangeLowMidi: midiFromNoteOctave(
+                      Number(e.target.value),
+                      octave,
+                    ),
+                  })
+                }}
+              >
+                {KEY_NAMES.map((name, i) => (
+                  <option key={name} value={i}>
+                    {keyOptionLabel(i)}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label>
-              上限
-              <span className="controls__note-pick">
-                <select
-                  value={noteOctaveFromMidi(sequence.rangeHighMidi).pc}
-                  onChange={(e) => {
-                    const { octave } = noteOctaveFromMidi(
-                      sequence.rangeHighMidi,
-                    )
-                    onSequenceChange({
-                      rangeHighMidi: midiFromNoteOctave(
-                        Number(e.target.value),
-                        octave,
-                      ),
-                    })
-                  }}
-                >
-                  {KEY_NAMES.map((name, i) => (
-                    <option key={name} value={i}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={noteOctaveFromMidi(sequence.rangeHighMidi).octave}
-                  onChange={(e) => {
-                    const { pc } = noteOctaveFromMidi(sequence.rangeHighMidi)
-                    onSequenceChange({
-                      rangeHighMidi: midiFromNoteOctave(
-                        pc,
-                        Number(e.target.value),
-                      ),
-                    })
-                  }}
-                >
-                  {[1, 2, 3, 4, 5, 6].map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </span>
+              音の高さ
+              <select
+                value={noteOctaveFromMidi(sequence.rangeLowMidi).octave}
+                onChange={(e) => {
+                  const { pc } = noteOctaveFromMidi(sequence.rangeLowMidi)
+                  onSequenceChange({
+                    rangeLowMidi: midiFromNoteOctave(
+                      pc,
+                      Number(e.target.value),
+                    ),
+                  })
+                }}
+              >
+                {OCTAVE_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {octaveOptionLabel(o)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              いちばん高い音
+              <select
+                value={noteOctaveFromMidi(sequence.rangeHighMidi).pc}
+                onChange={(e) => {
+                  const { octave } = noteOctaveFromMidi(sequence.rangeHighMidi)
+                  onSequenceChange({
+                    rangeHighMidi: midiFromNoteOctave(
+                      Number(e.target.value),
+                      octave,
+                    ),
+                  })
+                }}
+              >
+                {KEY_NAMES.map((name, i) => (
+                  <option key={name} value={i}>
+                    {keyOptionLabel(i)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              音の高さ
+              <select
+                value={noteOctaveFromMidi(sequence.rangeHighMidi).octave}
+                onChange={(e) => {
+                  const { pc } = noteOctaveFromMidi(sequence.rangeHighMidi)
+                  onSequenceChange({
+                    rangeHighMidi: midiFromNoteOctave(
+                      pc,
+                      Number(e.target.value),
+                    ),
+                  })
+                }}
+              >
+                {OCTAVE_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {octaveOptionLabel(o)}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="controls__check">
@@ -281,7 +335,7 @@ export function Controls({
                   onSequenceChange({ chromaticSteps: e.target.checked })
                 }
               />
-              半音ステップ
+              半音ステップ（キー外の音も含める）
             </label>
           </div>
 
@@ -301,10 +355,9 @@ export function Controls({
                   : { ok: true as const, value: 0 }
               return (
                 <>
-                  範囲内の音は {count} 個（
-                  {sequence.chromaticSteps ? '半音' : 'キー内'}
-                  ）。結果は round のあと 0..{Math.max(0, count - 1)}{' '}
-                  でループ。休符では n は進みません。
+                  いまの範囲には音が {count} 個あります（
+                  {sequence.chromaticSteps ? '半音すべて' : 'キー内のみ'}
+                  ）。計算結果は四捨五入し、範囲をはみ出したら最初に戻ります。
                   {!check.ok && (
                     <span className="controls__error"> — {check.error}</span>
                   )}
@@ -319,6 +372,9 @@ export function Controls({
         <button type="button" className="btn btn--primary" onClick={onGenerate}>
           生成
         </button>
+        <p className="controls__actions-hint">
+          押すと下に候補が出ます →「聴く」→「譜面へ」（複数小節は小節ごとに分割して並びます）
+        </p>
       </div>
     </div>
   )

@@ -36,20 +36,20 @@ export async function stopPlayback(): Promise<void> {
   playing = false
 }
 
+/** Play phrases using each phrase's own BPM. */
 export async function playPhrases(
   phrases: Phrase[],
-  bpm: number,
   onEnd?: () => void,
 ): Promise<void> {
   await ensureAudio()
   await stopPlayback()
 
   const s = getSynth()
-  const beatSec = 60 / bpm
   let t = Tone.now() + 0.05
   const start = t
 
   for (const phrase of phrases) {
+    const beatSec = 60 / Math.max(1, phrase.bpm)
     for (const note of phrase.notes) {
       const durSec = DURATION_BEATS[note.duration] * beatSec
       if (!note.rest) {
@@ -71,8 +71,7 @@ export async function playPhrases(
 
 export async function playPhrase(
   phrase: Phrase,
-  bpm: number,
   onEnd?: () => void,
 ): Promise<void> {
-  await playPhrases([phrase], bpm, onEnd)
+  await playPhrases([phrase], onEnd)
 }
