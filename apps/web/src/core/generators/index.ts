@@ -10,7 +10,7 @@ import { generateSequencePhrase } from './sequence'
 
 export { parseNumberList } from './sequence'
 
-/** 1〜2小節=1枠→最大8、3〜4小節=2枠→最大4 */
+/** 1〜2小節→最大8、3〜4小節→最大4（長い候補は件数を抑える） */
 export function maxCandidateCount(barCount: number): number {
   return barCount >= 3 ? 4 : 8
 }

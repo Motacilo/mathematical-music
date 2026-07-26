@@ -5,6 +5,10 @@ interface SectionTuneBarProps {
   keyRoot: number
   bpmInput: string
   disabled?: boolean
+  /** default = candidates (green), score = blue */
+  variant?: 'default' | 'score'
+  keyLabel?: string
+  bpmLabel?: string
   onKeyChange: (keyRoot: number) => void
   onBpmInputChange: (value: string) => void
   onBpmCommit: () => void
@@ -14,14 +18,19 @@ export function SectionTuneBar({
   keyRoot,
   bpmInput,
   disabled = false,
+  variant = 'default',
+  keyLabel = 'キー',
+  bpmLabel = 'BPM',
   onKeyChange,
   onBpmInputChange,
   onBpmCommit,
 }: SectionTuneBarProps) {
   return (
-    <div className={`section-tune${disabled ? ' is-disabled' : ''}`}>
+    <div
+      className={`section-tune section-tune--${variant}${disabled ? ' is-disabled' : ''}`}
+    >
       <label>
-        キー
+        {keyLabel}
         <select
           value={keyRoot}
           disabled={disabled}
@@ -35,7 +44,7 @@ export function SectionTuneBar({
         </select>
       </label>
       <label>
-        BPM
+        {bpmLabel}
         <input
           type="text"
           inputMode="numeric"

@@ -177,8 +177,9 @@
 }
 
 .btn {
-  font: inherit;
-  font-size: 0.95rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
   padding: 8px 16px;
   border-radius: 4px;
   border: 1px solid rgba(20, 28, 24, 0.22);
@@ -192,10 +193,24 @@
   cursor: not-allowed;
 }
 
-.btn--primary {
+.btn.btn--primary {
   background: #2f6f4e;
   border-color: #2f6f4e;
   color: #fff;
+}
+
+.btn.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btn--danger {
+  background: #fff;
+  border-color: rgba(179, 59, 42, 0.45);
+  color: #b33b2a;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #fdf2f0;
 }
 
 .btn:hover:not(:disabled) {

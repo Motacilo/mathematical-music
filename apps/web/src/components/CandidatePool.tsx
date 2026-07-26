@@ -4,14 +4,18 @@ import './CandidatePool.css'
 
 interface CandidatePoolProps {
   candidates: Phrase[]
+  favoritedIds: Set<string>
   onPreview: (phrase: Phrase) => void
   onAdd: (phrase: Phrase) => void
+  onFavorite: (phrase: Phrase) => void
 }
 
 export function CandidatePool({
   candidates,
+  favoritedIds,
   onPreview,
   onAdd,
+  onFavorite,
 }: CandidatePoolProps) {
   if (candidates.length === 0) {
     return (
@@ -22,7 +26,7 @@ export function CandidatePool({
             上の設定でモードとキーを選び、「生成」を押すと、フレーズ候補（1〜4小節）がここに並びます。
           </p>
           <p className="candidate-pool__empty-tip">
-            1〜2小節は細い枠・最大8件、3〜4小節は2枠分の幅・最大4件。「譜面へ」で小節ごとに追加されます。
+            枠の最小幅を保ったまま列数が変わります。1〜2小節は最大8件、3〜4小節は最大4件。「譜面へ」で小節ごとに追加されます。
           </p>
         </div>
       </div>
@@ -33,17 +37,23 @@ export function CandidatePool({
     <div className="candidate-pool-wrap">
       <div className="candidate-pool">
         {candidates.map((phrase, i) => {
-          const isWide = phrase.bars >= 3
+          const favorited = favoritedIds.has(phrase.id)
           return (
-            <article
-              key={phrase.id}
-              className={`candidate-card${isWide ? ' candidate-card--wide' : ''}`}
-            >
+            <article key={phrase.id} className="candidate-card">
               <header className="candidate-card__head">
                 <span className="candidate-card__label">候補 {i + 1}</span>
                 <div className="candidate-card__actions">
                   <button type="button" onClick={() => onPreview(phrase)}>
                     聴く
+                  </button>
+                  <button
+                    type="button"
+                    className={`fav${favorited ? ' is-saved' : ''}`}
+                    onClick={() => onFavorite(phrase)}
+                    disabled={favorited}
+                    title={favorited ? 'お気に入り済' : 'お気に入りに追加'}
+                  >
+                    ★
                   </button>
                   <button
                     type="button"

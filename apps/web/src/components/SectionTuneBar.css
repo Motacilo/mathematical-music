@@ -9,6 +9,10 @@
   border-radius: 6px;
 }
 
+.section-tune--score {
+  background: rgba(45, 74, 107, 0.08);
+}
+
 .section-tune.is-disabled {
   opacity: 0.55;
 }
@@ -23,6 +27,10 @@
   color: #5a655c;
 }
 
+.section-tune--score label {
+  color: #5a6b7d;
+}
+
 .section-tune select,
 .section-tune input[type='text'] {
   font: inherit;
@@ -35,4 +43,10 @@
   border-radius: 4px;
   background: #fff;
   min-width: 88px;
+}
+
+.section-tune--score select,
+.section-tune--score input[type='text'] {
+  border-color: rgba(45, 74, 107, 0.28);
+  color: #2d4a6b;
 }

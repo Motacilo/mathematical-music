@@ -39,5 +39,16 @@ body {
 button,
 input,
 select {
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: normal;
+}
+
+button {
+  font-weight: 600;
+}
+
+input,
+select {
+  font-weight: 400;
 }

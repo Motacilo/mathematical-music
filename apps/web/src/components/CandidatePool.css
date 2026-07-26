@@ -1,13 +1,11 @@
-/* 候補エリア自身の幅で列数を決める */
 .candidate-pool-wrap {
-  container-type: inline-size;
-  container-name: candidates;
   width: 100%;
 }
 
 .candidate-pool {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* 譜面と同じ最小幅で列数を自動調整 */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
 }
 
@@ -49,13 +47,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 0;
-  grid-column: span 1;
-}
-
-/* 同じ列数のグリッド上で 2 スロット分の幅にする */
-.candidate-card--wide {
-  grid-column: span 2;
+  min-width: 260px;
 }
 
 .candidate-card__head {
@@ -75,13 +67,15 @@
 
 .candidate-card__actions {
   display: flex;
+  flex-wrap: nowrap;
   flex-shrink: 0;
   gap: 4px;
 }
 
 .candidate-card__actions button {
-  font: inherit;
+  font-family: inherit;
   font-size: 0.75rem;
+  font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
   border: 1px solid rgba(20, 28, 24, 0.2);
@@ -97,33 +91,20 @@
   color: #fff;
 }
 
+.candidate-card__actions button.fav {
+  color: #c45c26;
+  border-color: rgba(196, 92, 38, 0.4);
+}
+
+.candidate-card__actions button.fav.is-saved,
+.candidate-card__actions button.fav:disabled {
+  color: #9aa39c;
+  border-color: rgba(20, 28, 24, 0.15);
+  background: #eef1ee;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .candidate-card__actions button:hover {
   filter: brightness(0.97);
-}
-
-/* 4 スロット: 1枠×4 / 2枠×2 */
-@container candidates (min-width: 640px) {
-  .candidate-pool {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-  }
-
-  .candidate-card__head {
-    font-size: 0.85rem;
-  }
-
-  .candidate-card__actions button {
-    font-size: 0.8rem;
-    padding: 4px 10px;
-  }
-}
-
-/*
-  8 スロットは「候補1・聴く・譜面へ」が1行に収まる幅だけ。
-  目安: 1枠あたり約 180px × 8 + gap ≈ 1520px
-*/
-@container candidates (min-width: 1520px) {
-  .candidate-pool {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-  }
 }

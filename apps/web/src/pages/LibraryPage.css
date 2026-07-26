@@ -1,0 +1,144 @@
+.library__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.btn {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(20, 28, 24, 0.22);
+  background: #fff;
+  color: #1d2620;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.library__tab {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(20, 28, 24, 0.2);
+  background: #fff;
+  color: #1d2620;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.library__tab.is-active {
+  background: #2f6f4e;
+  border-color: #2f6f4e;
+  color: #fff;
+}
+
+.library__empty {
+  margin: 0;
+  color: #5a655c;
+  line-height: 1.5;
+}
+
+.library__empty--score {
+  color: #5a6b7d;
+}
+
+.library__fav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.library__card,
+.library__score-card {
+  background: #f4f7f3;
+  border: 1px solid rgba(20, 28, 24, 0.1);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.library__score-card {
+  background: #eef3f9;
+  border-color: rgba(45, 74, 107, 0.22);
+}
+
+.library__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.library__meta {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: #5a655c;
+  font-weight: 500;
+}
+
+.library__score-card .library__meta {
+  color: #5a7a9a;
+}
+
+.library__card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.library__card-actions button {
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(20, 28, 24, 0.2);
+  background: #fff;
+  color: #1d2620;
+  cursor: pointer;
+}
+
+.library__card-actions button.primary {
+  background: #2f6f4e;
+  border-color: #2f6f4e;
+  color: #fff;
+}
+
+.library__score-card .library__card-actions button.primary {
+  background: #2d4a6b;
+  border-color: #2d4a6b;
+}
+
+.library__card-actions button.danger {
+  color: #b33b2a;
+  border-color: rgba(179, 59, 42, 0.35);
+}
+
+.library__score-rolls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.library__score-roll {
+  min-width: 0;
+}
+
+.library .phrase-roll {
+  height: 64px;
+}

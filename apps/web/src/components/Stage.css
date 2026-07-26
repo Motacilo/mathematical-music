@@ -34,8 +34,6 @@
 }
 
 .stage-wrap {
-  container-type: inline-size;
-  container-name: stage;
   width: 100%;
 }
 
@@ -44,26 +42,12 @@
   margin: 0;
   padding: 0;
   display: grid;
-  /* 候補と同じスロット数。各小節は常に span 2（候補の2枠分） */
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-@container stage (min-width: 640px) {
-  .stage__list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-  }
-}
-
-@container stage (min-width: 1520px) {
-  .stage__list {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-  }
+  /* 1枠。最小幅未満にはせず、収まらなければ列数を減らす */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
 }
 
 .stage__item {
-  grid-column: span 2;
   background: #eef3f9;
   border: 1px solid rgba(45, 74, 107, 0.22);
   border-radius: 6px;
@@ -71,38 +55,43 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 0;
+  min-width: 260px;
 }
 
 .stage__item-meta {
   display: flex;
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   color: #2d4a6b;
 }
 
 .stage__item-title {
-  min-width: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .stage__item-actions {
   display: flex;
+  flex-wrap: nowrap;
   gap: 3px;
   flex-shrink: 0;
 }
 
 .stage__item-actions button {
-  font: inherit;
-  font-size: 0.68rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
   padding: 2px 6px;
   border-radius: 3px;
   border: 1px solid rgba(45, 74, 107, 0.25);
   background: #fff;
   color: #2d4a6b;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .stage__item-actions button.stage__item-play {
@@ -117,7 +106,7 @@
 
 .stage__tune {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px 10px;
   align-items: flex-end;
 }
@@ -131,13 +120,14 @@
   text-transform: uppercase;
   color: #5a7a9a;
   font-weight: 600;
+  min-width: 0;
 }
 
 .stage__tune select,
 .stage__tune input[type='text'] {
-  font: inherit;
+  font-family: inherit;
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 400;
   text-transform: none;
   letter-spacing: normal;
   color: #2d4a6b;
@@ -145,7 +135,9 @@
   border: 1px solid rgba(45, 74, 107, 0.28);
   border-radius: 4px;
   background: #fff;
-  min-width: 72px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* 譜面内のピアノロール：紙っぽい色＋青系の音符 */
@@ -204,8 +196,9 @@
 }
 
 .stage__editor-btns button {
-  font: inherit;
+  font-family: inherit;
   font-size: 0.85rem;
+  font-weight: 600;
   padding: 6px 12px;
   border-radius: 4px;
   border: none;
