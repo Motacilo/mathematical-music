@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { playPhrase, playPhrases, stopPlayback } from '../audio/player'
+import { AppFooter } from '../components/AppFooter'
 import { CandidatePool } from '../components/CandidatePool'
 import { Controls } from '../components/Controls'
 import { SectionTuneBar } from '../components/SectionTuneBar'
@@ -677,6 +678,7 @@ export default function ComposerPage() {
           }}
         />
       </section>
+      <AppFooter />
     </div>
   )
 }

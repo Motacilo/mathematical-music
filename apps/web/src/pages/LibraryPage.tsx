@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { playPhrase, playPhrases, stopPlayback } from '../audio/player'
+import { AppFooter } from '../components/AppFooter'
 import { PhraseRoll } from '../components/PhraseRoll'
 import {
   formatSavedAt,
@@ -214,6 +215,7 @@ export default function LibraryPage() {
           )}
         </section>
       )}
+      <AppFooter />
     </div>
   )
 }

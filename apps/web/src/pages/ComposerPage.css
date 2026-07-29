@@ -397,3 +397,27 @@
     padding: 32px 28px 72px;
   }
 }
+
+.app__footer {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(47, 111, 78, 0.15);
+}
+
+.app__footer p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.app__footer a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app__footer a:hover {
+  color: #1e4d35;
+}
