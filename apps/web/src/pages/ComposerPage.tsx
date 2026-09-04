@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { playPhrase, playPhrases, stopPlayback } from '../audio/player'
 import { AppFooter } from '../components/AppFooter'
+import { KeySyncCheckbox } from '../components/KeySyncCheckbox'
 import { CandidatePool } from '../components/CandidatePool'
 import { Controls } from '../components/Controls'
 import { SectionTuneBar } from '../components/SectionTuneBar'
@@ -19,6 +20,8 @@ import {
   writeComposerDraft,
   type ComposerDraft,
 } from '../core/composerDraft'
+import { useProject } from '../core/ProjectContext'
+import { readProjectDraft } from '../core/projectStore'
 import { splitPhraseIntoBars } from '../core/phraseSplit'
 import {
   applyBpmToPhrases,
@@ -61,7 +64,8 @@ function parsePositiveBpm(raw: string, fallback: number): number {
 }
 
 export default function ComposerPage() {
-  const [boot] = useState(() => readComposerDraft())
+  const { setMelody, draft: projectDraft, setMeta } = useProject()
+  const [boot] = useState(() => readProjectDraft().melody)
 
   const [mode, setMode] = useState<GenMode>(
     () => boot?.mode ?? 'distribution',
@@ -137,6 +141,7 @@ export default function ComposerPage() {
       stageBpmInput,
     }
     writeComposerDraft(draft)
+    setMelody(draft)
   }, [
     mode,
     settings,
@@ -150,6 +155,33 @@ export default function ComposerPage() {
     candidateBpm,
     candidateBpmInput,
     stageBpmInput,
+    setMelody,
+  ])
+
+  // Project key sync → local settings
+  useEffect(() => {
+    if (!projectDraft.keySync.melody) return
+    setSettings((s) => {
+      if (
+        s.keyRoot === projectDraft.meta.keyRoot &&
+        s.scale === projectDraft.meta.scale &&
+        s.bpm === projectDraft.meta.bpm
+      ) {
+        return s
+      }
+      return {
+        ...s,
+        keyRoot: projectDraft.meta.keyRoot,
+        scale: projectDraft.meta.scale,
+        bpm: projectDraft.meta.bpm,
+      }
+    })
+    setBpmInput(String(projectDraft.meta.bpm))
+  }, [
+    projectDraft.meta.keyRoot,
+    projectDraft.meta.scale,
+    projectDraft.meta.bpm,
+    projectDraft.keySync.melody,
   ])
 
   useEffect(() => {
@@ -420,7 +452,7 @@ export default function ComposerPage() {
         : ''
 
   return (
-    <div className="app">
+    <div className="app layer-page layer-page--melody">
       {clearConfirm && (
         <div
           className="app__confirm"
@@ -453,19 +485,12 @@ export default function ComposerPage() {
         </div>
       )}
       <header className="app__header">
-        <div className="app__header-top">
-          <p className="app__brand">なんとなく作曲</p>
-          <nav className="app__nav">
-            <Link to="/library" className="app__nav-link">
-              ライブラリ
-            </Link>
-          </nav>
-        </div>
         <h1>雰囲気メロディ</h1>
         <p className="app__lead">
           作曲が苦手でも、最大4小節までのフレーズを作って並べるだけでメロディになります。完成したら
           MIDI / WAV で書き出せます。設定・候補・譜面はこのブラウザに自動保存されます。
         </p>
+        <KeySyncCheckbox layer="melody" />
         <ol className="app__steps">
           <li>
             <span className="app__step-num">1</span>
@@ -532,6 +557,17 @@ export default function ComposerPage() {
               }
               return next
             })
+            if (projectDraft.keySync.melody) {
+              const metaPatch: {
+                keyRoot?: number
+                scale?: typeof settings.scale
+                bpm?: number
+              } = {}
+              if (typeof patch.keyRoot === 'number') metaPatch.keyRoot = patch.keyRoot
+              if (patch.scale) metaPatch.scale = patch.scale
+              if (typeof patch.bpm === 'number') metaPatch.bpm = patch.bpm
+              if (Object.keys(metaPatch).length) setMeta(metaPatch)
+            }
           }}
           onDistributionChange={(patch) =>
             setDistribution((d) => ({ ...d, ...patch }))

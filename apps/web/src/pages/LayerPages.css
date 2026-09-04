@@ -1,0 +1,369 @@
+.layer-page.app {
+  width: 100%;
+  padding: 12px 0 32px;
+}
+
+.layer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.layer-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.layer-controls select,
+.layer-controls input[type='number'] {
+  font-family: inherit;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(47, 111, 78, 0.35);
+}
+
+.layer-hint {
+  margin: 8px 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.layer-card-seq {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #3a443c;
+  word-break: break-word;
+}
+
+.layer-card-seq--center {
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 12px 8px 4px;
+  color: #2d4a6b;
+}
+
+.layer-card-tones {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.layer-card-tones--center {
+  text-align: center;
+  padding: 0 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #3a4a5c;
+}
+
+.quality-box {
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(47, 111, 78, 0.18);
+  border-radius: 6px;
+}
+
+.quality-box__title {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1d2620;
+}
+
+.quality-box__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 8px;
+}
+
+.chord-project-key {
+  margin: 0;
+  align-self: end;
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding-bottom: 6px;
+}
+
+.root-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #6a7a6e;
+  background: rgba(47, 111, 78, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.chord-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.drum-preview {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drum-preview__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drum-preview__label {
+  width: 3.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.drum-preview__lane {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  background: rgba(47, 111, 78, 0.08);
+  border-radius: 2px;
+}
+
+.drum-preview__hit {
+  position: absolute;
+  top: 2px;
+  width: 6px;
+  height: 10px;
+  border-radius: 1px;
+  transform: translateX(-50%);
+}
+
+.drum-preview__hit--kick {
+  background: #a33a3a;
+}
+
+.drum-preview__hit--snare {
+  background: #6b2d2d;
+}
+
+.drum-preview__hit--hat {
+  background: #c07070;
+}
+
+.arrange-warn {
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: rgba(180, 120, 40, 0.15);
+  border: 1px solid rgba(180, 120, 40, 0.35);
+  border-radius: 6px;
+  font-size: 0.88rem;
+  color: #5a4010;
+}
+
+.arrange-warn p {
+  margin: 4px 0;
+}
+
+.mixer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.mixer-table th,
+.mixer-table td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(47, 111, 78, 0.15);
+}
+
+.mixer-table input[type='range'] {
+  width: 100px;
+}
+
+.btn.primary,
+button.primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.danger,
+.btn.danger {
+  background: transparent;
+  color: #a33;
+  border: 1px solid rgba(160, 50, 50, 0.35);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.stage__item-actions button.danger {
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 6px;
+}
+
+/* ---- Layer theme colors ---- */
+
+.layer-page--chords {
+  --accent: #a67c00;
+  --layer-tint: #fbf6e4;
+  --layer-card: #faf3d9;
+  --layer-score: #f5edd0;
+  --layer-ink: #6b5200;
+}
+
+.layer-page--bass {
+  --accent: #2d4a6b;
+  --layer-tint: #eaf1f8;
+  --layer-card: #e4eef8;
+  --layer-score: #d9e6f4;
+  --layer-ink: #1e354d;
+}
+
+.layer-page--drums {
+  --accent: #a33a3a;
+  --layer-tint: #f9ecec;
+  --layer-card: #f8e6e6;
+  --layer-score: #f0d8d8;
+  --layer-ink: #6b2424;
+}
+
+.layer-page--arrange {
+  --accent: #555555;
+  --layer-tint: #f7f7f7;
+  --layer-card: #ffffff;
+  --layer-score: #f0f0f0;
+  --layer-ink: #333333;
+}
+
+.layer-page--melody {
+  --accent: #2f6f4e;
+  --layer-tint: #eef5f0;
+  --layer-card: #f4f7f3;
+  --layer-score: #eef3f9;
+  --layer-ink: #1d2620;
+}
+
+.layer-page--chords .app__header h1,
+.layer-page--bass .app__header h1,
+.layer-page--drums .app__header h1,
+.layer-page--arrange .app__header h1 {
+  color: var(--layer-ink);
+}
+
+.layer-page--chords .app__section,
+.layer-page--bass .app__section,
+.layer-page--drums .app__section,
+.layer-page--arrange .app__section {
+  background: var(--layer-tint);
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.layer-page--chords .app__section--score,
+.layer-page--bass .app__section--score,
+.layer-page--drums .app__section--score,
+.layer-page--arrange .app__section--score {
+  background: var(--layer-score);
+}
+
+.layer-page--chords .candidate-card,
+.layer-page--bass .candidate-card,
+.layer-page--drums .candidate-card {
+  background: var(--layer-card);
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.layer-page--chords .stage__item,
+.layer-page--bass .stage__item,
+.layer-page--drums .stage__item {
+  background: color-mix(in srgb, var(--layer-card) 70%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.layer-page--chords .stage__item-meta,
+.layer-page--bass .stage__item-meta,
+.layer-page--drums .stage__item-meta {
+  color: var(--layer-ink);
+}
+
+.layer-page--chords .layer-card-seq--center,
+.layer-page--bass .layer-card-seq--center,
+.layer-page--drums .layer-card-seq--center {
+  color: var(--layer-ink);
+}
+
+.layer-page--chords .quality-box,
+.layer-page--bass .quality-box,
+.layer-page--drums .quality-box,
+.layer-page--arrange .quality-box {
+  background: color-mix(in srgb, var(--layer-card) 80%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.layer-page--chords .btn.primary,
+.layer-page--bass .btn.primary,
+.layer-page--drums .btn.primary,
+.layer-page--arrange .btn.primary,
+.layer-page--chords button.primary,
+.layer-page--bass button.primary,
+.layer-page--drums button.primary,
+.layer-page--chords .candidate-card__actions button.primary,
+.layer-page--bass .candidate-card__actions button.primary,
+.layer-page--drums .candidate-card__actions button.primary,
+.layer-page--chords .stage__item-actions button.primary,
+.layer-page--bass .stage__item-actions button.primary,
+.layer-page--drums .stage__item-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.layer-page--chords .btn--score,
+.layer-page--bass .btn--score,
+.layer-page--drums .btn--score,
+.layer-page--arrange .btn--score {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.layer-page--arrange .mixer-table th {
+  color: var(--layer-ink);
+}
+
+.layer-page--arrange .app__section {
+  background: #fafafa;
+  border: 1px solid #ddd;
+}
+
+.layer-page--chords .candidate-pool--empty,
+.layer-page--bass .candidate-pool--empty,
+.layer-page--drums .candidate-pool--empty {
+  background: color-mix(in srgb, var(--layer-tint) 80%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.layer-page--chords .stage--empty,
+.layer-page--bass .stage--empty,
+.layer-page--drums .stage--empty {
+  background: color-mix(in srgb, var(--layer-score) 90%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--layer-ink);
+}

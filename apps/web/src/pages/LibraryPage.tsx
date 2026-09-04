@@ -53,12 +53,12 @@ export default function LibraryPage() {
     // multi-bar favorites are stored as one Phrase → split into measures.
     const bars = splitPhraseIntoBars(entry.phrase)
     setPendingAppend(bars)
-    navigate('/')
+    navigate('/layer/melody')
   }
 
   const appendScore = (entry: ScoreEntry) => {
     setPendingAppend(entry.phrases)
-    navigate('/')
+    navigate('/layer/melody')
   }
 
   const deleteFavorite = (id: string) => {
@@ -79,7 +79,7 @@ export default function LibraryPage() {
         <div className="app__header-top">
           <p className="app__brand">なんとなく作曲</p>
           <nav className="app__nav">
-            <Link to="/" className="app__nav-link">
+            <Link to="/layer/melody" className="app__nav-link">
               作曲へ戻る
             </Link>
           </nav>

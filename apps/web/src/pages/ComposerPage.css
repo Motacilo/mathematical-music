@@ -1,8 +1,8 @@
 .app {
-  width: min(1600px, 96vw);
+  width: 100%;
   max-width: 100%;
-  margin: 0 auto;
-  padding: 28px 24px 64px;
+  margin: 0;
+  padding: 12px 0 32px;
   display: flex;
   flex-direction: column;
   gap: 24px;
