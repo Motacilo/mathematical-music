@@ -26,6 +26,9 @@ import {
   type ComposerDraft,
   writeComposerDraft,
 } from './composerDraft'
+import { createDefaultTones, normalizeToneMap, type ToneMap } from './tones/presets'
+import { isMoodId, type MoodId } from './mood/presets'
+import { normalizeSections, type SongSection } from './sections/roles'
 
 const PROJECT_DRAFT_KEY = 'mm-project-draft-v2'
 
@@ -36,6 +39,10 @@ export interface ProjectDraft {
   /** Checked layers for arrange play / WAV / MIDI */
   layerInclude: LayerIncludeState
   keySync: KeySyncState
+  tones: ToneMap
+  /** Song atmosphere. Null on drafts made before moods were stored. */
+  moodId: MoodId | null
+  sections: SongSection[]
   melody: ComposerDraft
   chords: ChordsLayerState
   bass: BassLayerState
@@ -92,6 +99,9 @@ export function createEmptyProjectDraft(
     mixer: createDefaultMixer(),
     layerInclude: createDefaultLayerInclude(),
     keySync: createDefaultKeySync(),
+    tones: createDefaultTones(),
+    moodId: null,
+    sections: [],
     melody: melody ?? emptyMelodyDraft(meta),
     chords: createDefaultChordsLayer(meta),
     bass: createDefaultBassLayer(meta),
@@ -126,6 +136,18 @@ export function readProjectDraft(): ProjectDraft {
         v2.chords.scale ?? v2.meta.scale,
       )
     }
+    if (!v2.drums.styleId) {
+      v2.drums.styleId = 'any'
+    }
+    if (!v2.drums.arrangeMode) {
+      v2.drums.arrangeMode = 'mixed'
+    }
+    if (!v2.chords.playStyle) {
+      v2.chords.playStyle = 'block'
+    }
+    v2.tones = normalizeToneMap(v2.tones)
+    v2.moodId = isMoodId(v2.moodId) ? v2.moodId : null
+    v2.sections = normalizeSections(v2.sections)
     // Drop legacy tonicQualityEnable if present
     delete (v2.chords as { tonicQualityEnable?: unknown }).tonicQualityEnable
     v2.chords.stage = (v2.chords.stage ?? []).map(normalizeChordBar)

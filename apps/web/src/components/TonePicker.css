@@ -1,0 +1,47 @@
+.tone-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tone-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.tone-row__label {
+  flex: 0 0 5.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--layer-ink, #1d2620);
+}
+
+.tone-row__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tone-choice {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: #fff;
+  color: #1d2620;
+  cursor: pointer;
+}
+
+.tone-choice:hover {
+  border-color: var(--accent);
+}
+
+.tone-choice.is-selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}

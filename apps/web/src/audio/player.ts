@@ -1,18 +1,69 @@
 import * as Tone from 'tone'
 import { DURATION_BEATS } from '../core/rhythm'
-import { chordPitches } from '../core/chords/theory'
+import {
+  expandChordBarPlay,
+  resolveChordPlayStyle,
+} from '../core/chords/playStyle'
 import { drumInstrumentMidi } from '../core/drums/generate'
-import type { ChordBar, DrumPhrase, MixerState, LayerKind } from '../core/projectTypes'
+import type {
+  ChordBar,
+  ChordPlayStyleId,
+  DrumPhrase,
+  MixerState,
+  LayerKind,
+} from '../core/projectTypes'
 import type { Phrase } from '../core/types'
+import {
+  createDefaultTones,
+  type ToneId,
+  type ToneMap,
+} from '../core/tones/presets'
+import { createBass, createPoly, type LeadSynth } from './voices'
 
 let poly: Tone.PolySynth | null = null
-let bassSynth: Tone.Synth | null = null
+let polyTone: ToneId | null = null
+let bassSynth: LeadSynth | null = null
+let bassTone: ToneId | null = null
 let kick: Tone.MembraneSynth | null = null
 let snare: Tone.NoiseSynth | null = null
 let hat: Tone.MetalSynth | null = null
 let endTimer: ReturnType<typeof setTimeout> | null = null
+let pumpTimer: ReturnType<typeof setTimeout> | null = null
+let playGeneration = 0
 let playing = false
+
+/** How far ahead of the speakers notes are handed to the synths. */
+const LOOKAHEAD_SEC = 0.8
+const PUMP_MS = 200
+/**
+ * Silence before the first note. Synths are built before this clock starts,
+ * so the delay only has to cover handing over the opening slice.
+ */
+export const PLAYBACK_START_DELAY_SEC = 0.15
 const gains: Partial<Record<LayerKind, Tone.Gain>> = {}
+type PlaybackListener = () => void
+const playbackListeners = new Set<PlaybackListener>()
+
+function notifyPlayback(next: boolean): void {
+  if (playing === next) return
+  playing = next
+  for (const listener of playbackListeners) listener()
+}
+
+/**
+ * Subscribe for useSyncExternalStore.
+ * Do not invoke the listener synchronously — React reads getSnapshot instead.
+ */
+export function subscribePlayback(onStoreChange: () => void): () => void {
+  playbackListeners.add(onStoreChange)
+  return () => {
+    playbackListeners.delete(onStoreChange)
+  }
+}
+
+export function getPlaybackSnapshot(): boolean {
+  return playing
+}
 
 function layerGain(kind: LayerKind): Tone.Gain {
   if (!gains[kind]) {
@@ -21,25 +72,26 @@ function layerGain(kind: LayerKind): Tone.Gain {
   return gains[kind]!
 }
 
-function getPoly(): Tone.PolySynth {
+function getPoly(tone: ToneId): Tone.PolySynth {
+  if (poly && polyTone !== tone) {
+    poly.dispose()
+    poly = null
+  }
   if (!poly) {
-    poly = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'triangle' },
-      envelope: { attack: 0.01, decay: 0.15, sustain: 0.35, release: 0.25 },
-    }).connect(layerGain('melody'))
+    poly = createPoly(tone).connect(layerGain('melody'))
+    polyTone = tone
   }
   return poly
 }
 
-function getBass(): Tone.Synth {
+function getBass(tone: ToneId): LeadSynth {
+  if (bassSynth && bassTone !== tone) {
+    bassSynth.dispose()
+    bassSynth = null
+  }
   if (!bassSynth) {
-    // Triangle + partials: flat level, but audible on small speakers
-    // (pure sine at octave 2 is often inaudible)
-    bassSynth = new Tone.Synth({
-      oscillator: { type: 'triangle' },
-      envelope: { attack: 0.005, decay: 0.01, sustain: 1, release: 0.03 },
-    }).connect(layerGain('bass'))
-    bassSynth.volume.value = 8
+    bassSynth = createBass(tone).connect(layerGain('bass'))
+    bassTone = tone
   }
   return bassSynth
 }
@@ -77,38 +129,38 @@ function getHat(): Tone.MetalSynth {
   return hat
 }
 
-function getChordPoly(): Tone.PolySynth {
-  // Reuse melody poly connected via a separate gain — use same poly with chords gain
-  // Create dedicated chord synth
-  return getOrCreateChordPoly()
-}
-
 let chordPoly: Tone.PolySynth | null = null
-function getOrCreateChordPoly(): Tone.PolySynth {
+let chordTone: ToneId | null = null
+function getChordPoly(tone: ToneId): Tone.PolySynth {
+  if (chordPoly && chordTone !== tone) {
+    chordPoly.dispose()
+    chordPoly = null
+  }
   if (!chordPoly) {
-    chordPoly = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'sine' },
-      envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 0.4 },
-    }).connect(layerGain('chords'))
+    chordPoly = createPoly(tone).connect(layerGain('chords'))
+    chordTone = tone
   }
   return chordPoly
 }
 
 export async function ensureAudio(): Promise<void> {
   await Tone.start()
-  getPoly()
-  getBass()
-  getKick()
-  getSnare()
-  getHat()
-  getOrCreateChordPoly()
 }
 
 export function isPlaying(): boolean {
   return playing
 }
 
-export async function stopPlayback(): Promise<void> {
+function clearPump(): void {
+  if (pumpTimer != null) {
+    clearTimeout(pumpTimer)
+    pumpTimer = null
+  }
+}
+
+function haltScheduledAudio(): void {
+  playGeneration += 1
+  clearPump()
   if (endTimer != null) {
     clearTimeout(endTimer)
     endTimer = null
@@ -125,12 +177,19 @@ export async function stopPlayback(): Promise<void> {
   snare?.dispose()
   hat?.dispose()
   poly = null
+  polyTone = null
   chordPoly = null
+  chordTone = null
   bassSynth = null
+  bassTone = null
   kick = null
   snare = null
   hat = null
-  playing = false
+}
+
+export async function stopPlayback(): Promise<void> {
+  haltScheduledAudio()
+  notifyPlayback(false)
 }
 
 function applyMixer(mixer: MixerState): void {
@@ -167,13 +226,22 @@ function noteGateSec(
   return Math.max(0.05, durSec * 0.96)
 }
 
-function schedulePhrasesMono(
-  synth: Tone.Synth | Tone.PolySynth,
+type MelodyCue = { at: number; freq: number; dur: number }
+type ChordCue = { at: number; freqs: number[]; dur: number }
+type DrumCue = { at: number; dur: number; velocity?: number }
+
+/**
+ * Notes are listed in seconds from the downbeat, then handed to the synths
+ * a couple of seconds at a time. Scheduling a whole song at once blocks the
+ * main thread long enough that the opening is already in the past, so those
+ * notes are dropped.
+ */
+function collectPhrases(
   phrases: Phrase[],
-  startTime: number,
   usePoly: boolean,
+  cues: MelodyCue[],
 ): number {
-  let t = startTime
+  let t = 0
   for (let pi = 0; pi < phrases.length; pi++) {
     const phrase = phrases[pi]!
     const beatSec = 60 / Math.max(1, phrase.bpm)
@@ -187,13 +255,11 @@ function schedulePhrasesMono(
           nextPitch = peekNextSoundingPitch(phrases[pi + 1]!.notes, 0)
         }
         const sameNext = !usePoly && nextPitch === note.pitch
-        const freq = Tone.Frequency(note.pitch, 'midi').toFrequency()
-        const gate = noteGateSec(durSec, sameNext, usePoly)
-        if (usePoly) {
-          ;(synth as Tone.PolySynth).triggerAttackRelease(freq, gate, t)
-        } else {
-          ;(synth as Tone.Synth).triggerAttackRelease(freq, gate, t)
-        }
+        cues.push({
+          at: t,
+          freq: Tone.Frequency(note.pitch, 'midi').toFrequency(),
+          dur: noteGateSec(durSec, sameNext, usePoly),
+        })
       }
       t += durSec
     }
@@ -201,43 +267,75 @@ function schedulePhrasesMono(
   return t
 }
 
-function scheduleChords(chords: ChordBar[], startTime: number): number {
-  const synth = getChordPoly()
-  let t = startTime
+function collectChords(
+  chords: ChordBar[],
+  playStyle: ChordPlayStyleId,
+  cues: ChordCue[],
+): number {
+  let t = 0
   for (const bar of chords) {
     const beatSec = 60 / Math.max(1, bar.bpm)
     const durSec = 4 * beatSec
-    const pitches = chordPitches(bar)
-    const freqs = pitches.map((p) =>
-      Tone.Frequency(p, 'midi').toFrequency(),
-    )
-    synth.triggerAttackRelease(freqs, Math.max(0.1, durSec * 0.95), t)
+    const style = resolveChordPlayStyle(playStyle)
+    for (const ev of expandChordBarPlay(bar, style)) {
+      cues.push({
+        at: t + ev.timeBeat * beatSec,
+        freqs: ev.pitches.map((pitch) =>
+          Tone.Frequency(pitch, 'midi').toFrequency(),
+        ),
+        dur: Math.max(0.05, ev.durationBeats * beatSec * 0.95),
+      })
+    }
     t += durSec
   }
   return t
 }
 
-function scheduleDrums(phrases: DrumPhrase[], startTime: number): number {
-  let end = startTime
-  let t0 = startTime
+function collectDrums(
+  phrases: DrumPhrase[],
+  kick: DrumCue[],
+  snare: DrumCue[],
+  hat: DrumCue[],
+): number {
+  let end = 0
+  let t0 = 0
   for (const phrase of phrases) {
     const beatSec = 60 / Math.max(1, phrase.bpm)
     for (const hit of phrase.hits) {
-      const t = t0 + hit.beat * beatSec
+      const at = t0 + hit.beat * beatSec
       const dur = DURATION_BEATS[hit.duration] * beatSec
       if (hit.instrument === 'kick') {
-        getKick().triggerAttackRelease('C1', Math.max(0.05, dur), t)
+        kick.push({ at, dur: Math.max(0.05, dur) })
       } else if (hit.instrument === 'snare') {
-        getSnare().triggerAttackRelease(Math.max(0.05, dur), t)
+        snare.push({ at, dur: Math.max(0.05, dur) })
       } else {
-        getHat().triggerAttackRelease(Math.max(0.03, dur * 0.5), t, 0.3)
+        hat.push({ at, dur: Math.max(0.03, dur * 0.5), velocity: 0.3 })
       }
-      end = Math.max(end, t + dur)
+      end = Math.max(end, at + dur)
     }
     t0 += phrase.bars * 4 * beatSec
     end = Math.max(end, t0)
   }
   return end
+}
+
+function scheduleSlice<T extends { at: number }>(
+  cues: T[],
+  cursor: { i: number },
+  start: number,
+  play: (cue: T, time: number) => void,
+): void {
+  const now = Tone.now()
+  const until = now + LOOKAHEAD_SEC
+  while (cursor.i < cues.length) {
+    const cue = cues[cursor.i]!
+    const time = start + cue.at
+    if (time > until) break
+    cursor.i += 1
+    // Re-read the clock: a slow handoff must drop late notes, not sound them all at once.
+    if (time < Tone.now() - 0.02) continue
+    play(cue, time)
+  }
 }
 
 export type LayerPlayback = {
@@ -247,44 +345,128 @@ export type LayerPlayback = {
   drums?: DrumPhrase[]
 }
 
+export type PlayOptions = {
+  chordPlayStyle?: ChordPlayStyleId
+  tones?: ToneMap
+}
+
 export async function playLayers(
   layers: LayerPlayback,
   mixer: MixerState,
   onEnd?: () => void,
-): Promise<void> {
-  await ensureAudio()
-  await stopPlayback()
-  applyMixer(mixer)
+  options?: PlayOptions,
+): Promise<number> {
+  // Flip UI to "停止" immediately (before any await)
+  notifyPlayback(true)
 
-  const start = Tone.now() + 0.05
-  let end = start
+  try {
+    await ensureAudio()
+    haltScheduledAudio()
+    const generation = playGeneration
+    applyMixer(mixer)
 
-  if (layers.melody?.length) {
-    end = Math.max(
-      end,
-      schedulePhrasesMono(getPoly(), layers.melody, start, true),
-    )
-  }
-  if (layers.chords?.length) {
-    end = Math.max(end, scheduleChords(layers.chords, start))
-  }
-  if (layers.bass?.length) {
-    end = Math.max(
-      end,
-      schedulePhrasesMono(getBass(), layers.bass, start, false),
-    )
-  }
-  if (layers.drums?.length) {
-    end = Math.max(end, scheduleDrums(layers.drums, start))
-  }
+    const chordStyle = options?.chordPlayStyle ?? 'block'
+    const tones = options?.tones ?? createDefaultTones()
+    const melodyCues: MelodyCue[] = []
+    const bassCues: MelodyCue[] = []
+    const chordCues: ChordCue[] = []
+    const kickCues: DrumCue[] = []
+    const snareCues: DrumCue[] = []
+    const hatCues: DrumCue[] = []
+    let span = 0
 
-  playing = true
-  const totalMs = (end - start + 0.25) * 1000
-  endTimer = setTimeout(() => {
-    playing = false
-    endTimer = null
-    onEnd?.()
-  }, totalMs)
+    if (layers.melody?.length) {
+      span = Math.max(span, collectPhrases(layers.melody, true, melodyCues))
+    }
+    if (layers.chords?.length) {
+      span = Math.max(span, collectChords(layers.chords, chordStyle, chordCues))
+    }
+    if (layers.bass?.length) {
+      span = Math.max(span, collectPhrases(layers.bass, false, bassCues))
+    }
+    if (layers.drums?.length) {
+      span = Math.max(
+        span,
+        collectDrums(layers.drums, kickCues, snareCues, hatCues),
+      )
+    }
+
+    const byAt = (a: { at: number }, b: { at: number }) => a.at - b.at
+    melodyCues.sort(byAt)
+    bassCues.sort(byAt)
+    chordCues.sort(byAt)
+    kickCues.sort(byAt)
+    snareCues.sort(byAt)
+    hatCues.sort(byAt)
+
+    if (melodyCues.length) getPoly(tones.melody)
+    if (chordCues.length) getChordPoly(tones.chords)
+    if (bassCues.length) getBass(tones.bass)
+    if (kickCues.length) getKick()
+    if (snareCues.length) getSnare()
+    if (hatCues.length) getHat()
+
+    const start = Tone.now() + PLAYBACK_START_DELAY_SEC
+    const melodyCursor = { i: 0 }
+    const bassCursor = { i: 0 }
+    const chordCursor = { i: 0 }
+    const kickCursor = { i: 0 }
+    const snareCursor = { i: 0 }
+    const hatCursor = { i: 0 }
+
+    const pump = () => {
+      if (generation !== playGeneration) return
+      scheduleSlice(melodyCues, melodyCursor, start, (cue, time) => {
+        getPoly(tones.melody).triggerAttackRelease(cue.freq, cue.dur, time)
+      })
+      scheduleSlice(chordCues, chordCursor, start, (cue, time) => {
+        getChordPoly(tones.chords).triggerAttackRelease(cue.freqs, cue.dur, time)
+      })
+      scheduleSlice(bassCues, bassCursor, start, (cue, time) => {
+        ;(getBass(tones.bass) as Tone.Synth).triggerAttackRelease(
+          cue.freq,
+          cue.dur,
+          time,
+        )
+      })
+      scheduleSlice(kickCues, kickCursor, start, (cue, time) => {
+        getKick().triggerAttackRelease('C1', cue.dur, time)
+      })
+      scheduleSlice(snareCues, snareCursor, start, (cue, time) => {
+        getSnare().triggerAttackRelease(cue.dur, time)
+      })
+      scheduleSlice(hatCues, hatCursor, start, (cue, time) => {
+        getHat().triggerAttackRelease(cue.dur, time, cue.velocity ?? 0.3)
+      })
+      const pending =
+        melodyCursor.i < melodyCues.length ||
+        chordCursor.i < chordCues.length ||
+        bassCursor.i < bassCues.length ||
+        kickCursor.i < kickCues.length ||
+        snareCursor.i < snareCues.length ||
+        hatCursor.i < hatCues.length
+      if (pending && generation === playGeneration) {
+        pumpTimer = setTimeout(pump, PUMP_MS)
+      }
+    }
+    pump()
+
+    if (generation !== playGeneration) return 0
+    if (!playing) notifyPlayback(true)
+
+    const totalMs = Math.max(100, (span + 0.35) * 1000)
+    endTimer = setTimeout(() => {
+      if (generation !== playGeneration) return
+      endTimer = null
+      clearPump()
+      notifyPlayback(false)
+      onEnd?.()
+    }, totalMs)
+    return Math.max(0, (start - Tone.now()) * 1000)
+  } catch (err) {
+    notifyPlayback(false)
+    throw err
+  }
 }
 
 /** Play phrases using each phrase's own BPM (melody / bass). */
@@ -292,6 +474,7 @@ export async function playPhrases(
   phrases: Phrase[],
   onEnd?: () => void,
   as: 'melody' | 'bass' = 'melody',
+  tones?: ToneMap,
 ): Promise<void> {
   const muteAll = {
     melody: true,
@@ -308,25 +491,34 @@ export async function playPhrases(
       solo: { melody: false, chords: false, bass: false, drums: false },
     },
     onEnd,
+    { tones },
   )
 }
 
 export async function playPhrase(
   phrase: Phrase,
   onEnd?: () => void,
+  tones?: ToneMap,
 ): Promise<void> {
-  await playPhrases([phrase], onEnd)
+  await playPhrases([phrase], onEnd, 'melody', tones)
 }
 
 export async function playChordProgression(
   chords: ChordBar[],
   onEnd?: () => void,
+  playStyle: ChordPlayStyleId = 'block',
+  tones?: ToneMap,
 ): Promise<void> {
-  await playLayers({ chords }, {
-    volume: { melody: 0, chords: 0.7, bass: 0, drums: 0 },
-    mute: { melody: true, chords: false, bass: true, drums: true },
-    solo: { melody: false, chords: false, bass: false, drums: false },
-  }, onEnd)
+  await playLayers(
+    { chords },
+    {
+      volume: { melody: 0, chords: 0.7, bass: 0, drums: 0 },
+      mute: { melody: true, chords: false, bass: true, drums: true },
+      solo: { melody: false, chords: false, bass: false, drums: false },
+    },
+    onEnd,
+    { chordPlayStyle: playStyle, tones },
+  )
 }
 
 export async function playDrumPhrase(

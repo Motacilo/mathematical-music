@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
-import { playLayers, stopPlayback } from '../audio/player'
+import { playLayers } from '../audio/player'
+import { PlayStopButton } from '../components/PlayStopButton'
+import { TonePicker } from '../components/TonePicker'
 import { downloadMultiTrackMidi } from '../export/midi'
 import { downloadMixWav, filterLayersByInclude } from '../export/wav'
 import { collectKeyWarnings, useProject } from '../core/ProjectContext'
@@ -11,8 +13,7 @@ import './LayerPages.css'
 const LAYERS: LayerKind[] = ['melody', 'chords', 'bass', 'drums']
 
 export default function ArrangePage() {
-  const { draft, setMixer, setLayerInclude } = useProject()
-  const [playing, setPlaying] = useState(false)
+  const { draft, setMixer, setLayerInclude, setTones } = useProject()
   const [exporting, setExporting] = useState(false)
   const warnings = collectKeyWarnings(draft)
 
@@ -42,8 +43,10 @@ export default function ArrangePage() {
       window.alert('チェックしたレイヤにデータがありません。')
       return
     }
-    setPlaying(true)
-    await playLayers(selectedLayers, draft.mixer, () => setPlaying(false))
+    await playLayers(selectedLayers, draft.mixer, undefined, {
+      chordPlayStyle: draft.chords.playStyle ?? 'block',
+      tones: draft.tones,
+    })
   }
 
   const patchVol = (kind: LayerKind, volume: number) => {
@@ -93,10 +96,9 @@ export default function ArrangePage() {
   return (
     <div className="app layer-page layer-page--arrange">
       <header className="app__header">
-        <h1>まとめ再生</h1>
+        <h1>出力</h1>
         <p className="app__lead">
-          「含める」にチェックしたレイヤだけをまとめて再生・WAV / MIDI 書き出しできます。
-          音量・ミュート・ソロもここで調整します。
+          できた曲をファイルにします。WAV は聴ける音声、MIDI はパートごとのデータです。
         </p>
       </header>
 
@@ -105,22 +107,78 @@ export default function ArrangePage() {
           {warnings.map((w) => (
             <p key={w}>{w}</p>
           ))}
-          <p>キーが食い違ったまま再生します。</p>
+          <p>キーが食い違ったまま書き出します。</p>
         </div>
       )}
 
       <section className="app__section">
-        <h2>ミキサー</h2>
+        <h2>ファイルにする</h2>
+        <div className="export-actions">
+          <button
+            type="button"
+            className="btn primary"
+            disabled={exporting || selectedCount === 0}
+            onClick={() => {
+              setExporting(true)
+              void downloadMixWav(
+                selectedLayers,
+                draft.mixer,
+                'song.wav',
+                draft.chords.playStyle ?? 'block',
+                draft.tones,
+              )
+                .catch((err: unknown) => {
+                  console.error(err)
+                  const msg = err instanceof Error ? err.message : String(err)
+                  window.alert(`WAV の書き出しに失敗しました。\n${msg}`)
+                })
+                .finally(() => setExporting(false))
+            }}
+          >
+            {exporting ? 'WAVを作っています…' : 'WAVで保存'}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={exporting || selectedCount === 0}
+            onClick={() => {
+              downloadMultiTrackMidi(selectedLayers, 'song.mid', draft.tones)
+            }}
+          >
+            MIDIで保存
+          </button>
+          <PlayStopButton
+            label="書き出す音を聴く"
+            className="btn btn--score"
+            disabled={selectedCount === 0}
+            onPlay={() => void playSelected()}
+          />
+        </div>
+        <p className="layer-hint">
+          チェックしたパートだけが入ります。音量・ミュート・ソロも、聴くときとファイルの両方に反映されます。
+        </p>
+      </section>
+
+      <section className="app__section">
+        <h2>書き出す音色</h2>
+        <p className="layer-hint">
+          メロディ、コード、ベースの鳴り方です。WAV と MIDI に入ります。
+        </p>
+        <TonePicker tones={draft.tones} onChange={setTones} />
+      </section>
+
+      <section className="app__section">
+        <h2>含めるパート</h2>
         <table className="mixer-table">
           <thead>
             <tr>
               <th>含める</th>
-              <th>レイヤ</th>
+              <th>パート</th>
               <th>内容</th>
               <th>キー</th>
               <th>音量</th>
-              <th>Mute</th>
-              <th>Solo</th>
+              <th>ミュート</th>
+              <th>ソロ</th>
             </tr>
           </thead>
           <tbody>
@@ -176,60 +234,8 @@ export default function ArrangePage() {
           </tbody>
         </table>
 
-        <div className="layer-controls" style={{ marginTop: 16 }}>
-          {playing ? (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void stopPlayback().then(() => setPlaying(false))}
-            >
-              停止
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => void playSelected()}
-            >
-              チェックしたレイヤを再生
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn"
-            disabled={exporting || selectedCount === 0}
-            onClick={() => {
-              downloadMultiTrackMidi(selectedLayers)
-            }}
-          >
-            MIDI（チェック分）
-          </button>
-          <button
-            type="button"
-            className="btn"
-            disabled={exporting || selectedCount === 0}
-            onClick={() => {
-              setExporting(true)
-              void downloadMixWav(
-                selectedLayers,
-                draft.mixer,
-                'arrangement.wav',
-              )
-                .catch((err: unknown) => {
-                  console.error(err)
-                  const msg =
-                    err instanceof Error ? err.message : String(err)
-                  window.alert(`WAV の書き出しに失敗しました。\n${msg}`)
-                })
-                .finally(() => setExporting(false))
-            }}
-          >
-            {exporting ? 'WAV生成中…' : 'WAV（チェック分をミックス）'}
-          </button>
-        </div>
         <p className="layer-hint">
-          「含める」がオフのレイヤは再生・書き出しから除外されます。Mute / Solo
-          はチェック済みレイヤの聴こえ方の調整用です。
+          オフにしたパートはファイルに入りません。ミュートはそのパートを消し、ソロはそれだけを残します。
         </p>
       </section>
     </div>

@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { playPhrase, playPhrases, stopPlayback } from '../audio/player'
+import { playPhrase, playPhrases } from '../audio/player'
 import { AppFooter } from '../components/AppFooter'
 import { PhraseRoll } from '../components/PhraseRoll'
+import { PlayStopButton } from '../components/PlayStopButton'
 import {
   formatSavedAt,
   listFavorites,
@@ -15,37 +16,31 @@ import {
 } from '../core/libraryStore'
 import { splitPhraseIntoBars } from '../core/phraseSplit'
 import { keyOptionLabel } from '../core/scale'
+import { useProject } from '../core/ProjectContext'
 import './ComposerPage.css'
 import './LibraryPage.css'
 
 type Tab = 'favorites' | 'scores'
 
 export default function LibraryPage() {
+  const { draft } = useProject()
   const navigate = useNavigate()
   const { tab: tabParam } = useParams()
   const tab: Tab = tabParam === 'scores' ? 'scores' : 'favorites'
   const [favorites, setFavorites] = useState(listFavorites)
   const [scores, setScores] = useState(listScores)
-  const [playing, setPlaying] = useState(false)
 
   const refresh = useCallback(() => {
     setFavorites(listFavorites())
     setScores(listScores())
   }, [])
 
-  const handleStop = async () => {
-    await stopPlayback()
-    setPlaying(false)
-  }
-
   const previewPhrase = async (entry: FavoriteEntry) => {
-    setPlaying(true)
-    await playPhrase(entry.phrase, () => setPlaying(false))
+    await playPhrase(entry.phrase, undefined, draft.tones)
   }
 
   const previewScore = async (entry: ScoreEntry) => {
-    setPlaying(true)
-    await playPhrases(entry.phrases, () => setPlaying(false))
+    await playPhrases(entry.phrases, undefined, 'melody', draft.tones)
   }
 
   const appendFavorite = (entry: FavoriteEntry) => {
@@ -103,11 +98,6 @@ export default function LibraryPage() {
         >
           保存した譜面（{scores.length}）
         </Link>
-        {playing && (
-          <button type="button" className="btn" onClick={() => void handleStop()}>
-            停止
-          </button>
-        )}
       </div>
 
       {tab === 'favorites' && (
@@ -132,12 +122,10 @@ export default function LibraryPage() {
                       </p>
                     </div>
                     <div className="library__card-actions">
-                      <button
-                        type="button"
-                        onClick={() => void previewPhrase(entry)}
-                      >
-                        聴く
-                      </button>
+                      <PlayStopButton
+                        label="聴く"
+                        onPlay={() => void previewPhrase(entry)}
+                      />
                       <button
                         type="button"
                         className="primary"
@@ -180,12 +168,10 @@ export default function LibraryPage() {
                       </p>
                     </div>
                     <div className="library__card-actions">
-                      <button
-                        type="button"
-                        onClick={() => void previewScore(entry)}
-                      >
-                        聴く
-                      </button>
+                      <PlayStopButton
+                        label="聴く"
+                        onPlay={() => void previewScore(entry)}
+                      />
                       <button
                         type="button"
                         className="primary"

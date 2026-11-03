@@ -13,6 +13,7 @@ export const DURATION_BEATS: Record<Duration, number> = {
   '4n': 1,
   '4n.': 1.5,
   '2n': 2,
+  '1n': 4,
 }
 
 export const BAR_BEATS = 4
@@ -65,7 +66,7 @@ function applyRandomRests(
   }))
 }
 
-/** Build mixed rhythm: random durations from pool, drop anything that would overflow the bar. */
+/** Build mixed rhythm: random durations from pool, then pad rests to fill the bar. */
 export function buildMixedSlots(
   pool: Duration[],
   restProbabilityPercent: number,
@@ -94,6 +95,21 @@ export function buildMixedSlots(
         duration,
         rest: maybeRest(restProbabilityPercent) || undefined,
       })
+      beats += DURATION_BEATS[duration]
+    }
+  }
+  // Always fill to exactly one bar so splitPhraseIntoBars stays aligned
+  while (beats < BAR_BEATS - 1e-9) {
+    const left = BAR_BEATS - beats
+    const duration: Duration =
+      left >= 1 - 1e-9 ? '4n' : left >= 0.5 - 1e-9 ? '8n' : '16n'
+    const dur = DURATION_BEATS[duration]
+    if (beats + dur > BAR_BEATS + 1e-9) {
+      slots.push({ duration: '16n', rest: true })
+      beats += 0.25
+    } else {
+      slots.push({ duration, rest: true })
+      beats += dur
     }
   }
   return slots

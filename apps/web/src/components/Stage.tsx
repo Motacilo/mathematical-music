@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { KEY_NAMES, keyOptionLabel, midiToNoteName } from '../core/scale'
 import type { Phrase } from '../core/types'
 import { PhraseRoll } from './PhraseRoll'
+import { PlayStopButton } from './PlayStopButton'
 import './Stage.css'
 
 /** Cumulative measure label for a phrase block on the stage. */
@@ -90,6 +91,8 @@ interface StageProps {
   onPhraseKeyChange: (phraseIndex: number, keyRoot: number) => void
   onPhraseBpmChange: (phraseIndex: number, bpm: number) => void
   onPlayPhrase: (phraseIndex: number) => void
+  /** Section name for each phrase, when the song has a structure */
+  sectionLabels?: readonly (string | null)[]
 }
 
 export function Stage({
@@ -102,6 +105,7 @@ export function Stage({
   onPhraseKeyChange,
   onPhraseBpmChange,
   onPlayPhrase,
+  sectionLabels,
 }: StageProps) {
   if (phrases.length === 0) {
     return (
@@ -132,15 +136,16 @@ export function Stage({
               <div className="stage__item-meta">
                 <span className="stage__item-title">
                   {measureRangeLabel(phrases, pi)}
+                  {sectionLabels?.[pi] && (
+                    <span className="stage__section-tag">{sectionLabels[pi]}</span>
+                  )}
                 </span>
                 <div className="stage__item-actions">
-                  <button
-                    type="button"
+                  <PlayStopButton
+                    label="再生"
                     className="stage__item-play"
-                    onClick={() => onPlayPhrase(pi)}
-                  >
-                    再生
-                  </button>
+                    onPlay={() => onPlayPhrase(pi)}
+                  />
                   <button
                     type="button"
                     disabled={pi === 0}

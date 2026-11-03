@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import {
-  playChordProgression,
-  stopPlayback,
-} from '../audio/player'
+import { playChordProgression } from '../audio/player'
+import { PlayStopButton } from '../components/PlayStopButton'
+import { ArrangeModal } from '../components/ArrangeModal'
 import { KeySyncCheckbox } from '../components/KeySyncCheckbox'
+import {
+  generateChordArrangeVariants,
+  type ChordArrangeVariant,
+} from '../core/arrange/variants'
 import {
   appendChordRoot,
   generateCandidateProgressions,
@@ -24,10 +27,14 @@ import {
 } from '../core/chords/theory'
 import { presetsForScale } from '../core/chords/transitions'
 import { useProject } from '../core/ProjectContext'
+import { sectionLabelAt } from '../core/sections/timeline'
+import { CHORD_PLAY_STYLE_OPTIONS } from '../core/chords/playStyle'
 import {
   ALL_CHORD_QUALITIES,
   CHORD_QUALITY_LABELS,
   type ChordBar,
+  type ChordNoteLabelMode,
+  type ChordPlayStyleId,
   type QualityEnableMap,
 } from '../core/projectTypes'
 import { KEY_NAMES, keyOptionLabel } from '../core/scale'
@@ -38,6 +45,25 @@ import './LayerPages.css'
 
 function cloneProg(prog: ChordBar[]): ChordBar[] {
   return prog.map((c) => ({ ...c, id: uid('ch') }))
+}
+
+function ChordProgPreview({
+  prog,
+  labelMode,
+}: {
+  prog: ChordBar[]
+  labelMode: ChordNoteLabelMode
+}) {
+  return (
+    <>
+      <p className="layer-card-seq">
+        {prog.map((c) => chordSymbolName(c)).join(' → ')}
+      </p>
+      <p className="layer-card-tones">
+        {prog.map((c) => chordTonesLine(c, labelMode)).join(' ｜ ')}
+      </p>
+    </>
+  )
 }
 
 function QualityChecks({
@@ -117,11 +143,19 @@ export default function ChordsPage() {
   const chords = draft.chords
   const { keyRoot, scale } = effectiveKey('chords')
   const bpm = draft.meta.bpm
-  const [playing, setPlaying] = useState(false)
+  const [arrangeSource, setArrangeSource] = useState<ChordBar[] | null>(null)
+  const [arrangeVariants, setArrangeVariants] = useState<ChordArrangeVariant[]>(
+    [],
+  )
   const labelMode = chords.noteLabelMode ?? 'letter'
   const projectKeyLabel = `${keyOptionLabel(draft.meta.keyRoot)} / ${
     draft.meta.scale === 'major' ? 'メジャー' : 'マイナー'
   }`
+
+  const openArrange = (prog: ChordBar[]) => {
+    setArrangeSource(prog)
+    setArrangeVariants(generateChordArrangeVariants(prog, 5))
+  }
 
   const setChordKey = (nextKey: number, nextScale: typeof scale) => {
     const syncOff =
@@ -156,8 +190,12 @@ export default function ChordsPage() {
   }
 
   const listen = async (prog: ChordBar[]) => {
-    setPlaying(true)
-    await playChordProgression(prog, () => setPlaying(false))
+    await playChordProgression(
+      prog,
+      undefined,
+      chords.playStyle ?? 'block',
+      draft.tones,
+    )
   }
 
   const appendToStage = (prog: ChordBar[]) => {
@@ -200,10 +238,32 @@ export default function ChordsPage() {
 
   return (
     <div className="app layer-page layer-page--chords">
+      {arrangeSource && (
+        <ArrangeModal
+          title="コードのちょいアレンジ"
+          sourcePreview={
+            <ChordProgPreview prog={arrangeSource} labelMode={labelMode} />
+          }
+          variants={arrangeVariants}
+          onClose={() => setArrangeSource(null)}
+          onRefresh={() =>
+            setArrangeVariants(generateChordArrangeVariants(arrangeSource, 5))
+          }
+          onPreview={(v) => void listen(v.progression)}
+          onAdd={(v) => {
+            appendToStage(v.progression)
+            setArrangeSource(null)
+          }}
+          renderVariant={(v) => (
+            <ChordProgPreview prog={v.progression} labelMode={labelMode} />
+          )}
+        />
+      )}
       <header className="app__header">
         <h1>雰囲気コード</h1>
         <p className="app__lead">
           1小節に1コード。ルート（I〜VII＋半音）とコード種類を選んで生成できます。
+          鳴らし方で同時押し・アルペジオなどを選べます。候補をタップするとちょいアレンジ案が出ます。
         </p>
         <KeySyncCheckbox layer="chords" />
       </header>
@@ -273,6 +333,24 @@ export default function ChordsPage() {
               <option value="solfege">ドレミ（ド · ミ · ソ）</option>
             </select>
           </label>
+          <label>
+            鳴らし方
+            <select
+              value={chords.playStyle ?? 'block'}
+              onChange={(e) =>
+                setChords({
+                  ...chords,
+                  playStyle: e.target.value as ChordPlayStyleId,
+                })
+              }
+            >
+              {CHORD_PLAY_STYLE_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
           {chords.mode !== 'free' && (
             <>
               <label>
@@ -315,15 +393,6 @@ export default function ChordsPage() {
                 生成
               </button>
             </>
-          )}
-          {playing && (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void stopPlayback().then(() => setPlaying(false))}
-            >
-              停止
-            </button>
           )}
         </div>
 
@@ -400,14 +469,34 @@ export default function ChordsPage() {
             <div className="candidate-pool-wrap">
               <div className="candidate-pool">
                 {chords.candidates.map((prog, i) => (
-                  <article key={i} className="candidate-card">
+                  <article
+                    key={i}
+                    className="candidate-card candidate-card--arrangeable"
+                    onClick={() => openArrange(prog)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        openArrange(prog)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    title="タップでちょいアレンジ"
+                  >
                     <header className="candidate-card__head">
                       <span className="candidate-card__label">
                         候補 {i + 1} · {prog.length}小節
                       </span>
-                      <div className="candidate-card__actions">
-                        <button type="button" onClick={() => void listen(prog)}>
-                          聴く
+                      <div
+                        className="candidate-card__actions"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <PlayStopButton
+                          label="聴く"
+                          onPlay={() => void listen(prog)}
+                        />
+                        <button type="button" onClick={() => openArrange(prog)}>
+                          アレンジ
                         </button>
                         <button
                           type="button"
@@ -418,12 +507,7 @@ export default function ChordsPage() {
                         </button>
                       </div>
                     </header>
-                    <p className="layer-card-seq">
-                      {prog.map((c) => chordSymbolName(c)).join(' → ')}
-                    </p>
-                    <p className="layer-card-tones">
-                      {prog.map((c) => chordTonesLine(c, labelMode)).join(' ｜ ')}
-                    </p>
+                    <ChordProgPreview prog={prog} labelMode={labelMode} />
                   </article>
                 ))}
               </div>
@@ -436,14 +520,12 @@ export default function ChordsPage() {
         <div className="app__section-head">
           <h2>コード譜面</h2>
           <div className="app__score-actions-row">
-            <button
-              type="button"
+            <PlayStopButton
+              label="譜面を再生"
               className="btn btn--score"
               disabled={chords.stage.length === 0}
-              onClick={() => void listen(chords.stage)}
-            >
-              譜面を再生
-            </button>
+              onPlay={() => void listen(chords.stage)}
+            />
             <button
               type="button"
               className="btn btn--danger"
@@ -467,11 +549,19 @@ export default function ChordsPage() {
               {chords.stage.map((c, i) => (
                 <li key={c.id} className="stage__item">
                   <div className="stage__item-meta">
-                    <span className="stage__item-title">小節 {i + 1}</span>
+                    <span className="stage__item-title">
+                      小節 {i + 1}
+                      {sectionLabelAt(draft.sections, i) && (
+                        <span className="stage__section-tag">
+                          {sectionLabelAt(draft.sections, i)}
+                        </span>
+                      )}
+                    </span>
                     <div className="stage__item-actions">
-                      <button type="button" onClick={() => void listen([c])}>
-                        聴く
-                      </button>
+                      <PlayStopButton
+                        label="聴く"
+                        onPlay={() => void listen([c])}
+                      />
                       <button
                         type="button"
                         className="danger"

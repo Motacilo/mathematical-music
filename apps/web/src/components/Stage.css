@@ -141,6 +141,16 @@
 }
 
 /* 譜面内のピアノロール：紙っぽい色＋青系の音符 */
+.stage__section-tag {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #3d5f8a;
+  background: #e7eef6;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
 .stage .phrase-roll {
   height: 64px;
   background:

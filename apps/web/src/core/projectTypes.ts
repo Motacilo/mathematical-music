@@ -39,6 +39,8 @@ export interface ChordBar {
   bpm: number
   keyRoot: number
   scale: ScaleType
+  /** Play this bar as one held chord, ignoring the song's strum pattern. */
+  sustain?: boolean
 }
 
 export type DrumInstrument = 'kick' | 'snare' | 'hat'
@@ -55,6 +57,11 @@ export interface DrumPhrase {
   bars: number
   bpm: number
   hits: DrumHit[]
+  /** Pattern family id (optional for legacy drafts) */
+  styleId?: string
+  /** Display label e.g. エイトビート（アレンジ） */
+  label?: string
+  arranged?: boolean
 }
 
 export interface MixerState {
@@ -80,6 +87,15 @@ export interface ProjectMeta {
 
 export type ChordGenMode = 'random' | 'markov' | 'free'
 export type BassGenMode = 'follow' | 'random'
+export type ChordPlayStyleId =
+  | 'block'
+  | 'pulse'
+  | 'arp_up'
+  | 'arp_down'
+  | 'arp_wave'
+  | 'broken'
+  | 'alberti'
+  | 'random'
 
 export interface ChordsLayerState {
   mode: ChordGenMode
@@ -96,7 +112,19 @@ export interface ChordsLayerState {
   qualityEnable: QualityEnableMap
   /** Allowed roots: I–VII and chromatic (♭II …) */
   rootEnable: RootEnableMap
+  /** How chords are articulated on play / mix export */
+  playStyle: ChordPlayStyleId
 }
+export type DrumStyleSelect =
+  | 'any'
+  | 'four_on_floor'
+  | 'eight_beat'
+  | 'sixteen_beat'
+  | 'rock'
+  | 'half_time'
+  | 'disco'
+  | 'ballad'
+export type DrumArrangeMode = 'clean' | 'light' | 'mixed'
 
 export interface BassLayerState {
   mode: BassGenMode
@@ -111,9 +139,12 @@ export interface BassLayerState {
 }
 
 export interface DrumsLayerState {
+  /** Arrange intensity 0–100 (used when ちょいアレンジ / 混在) */
   density: number
   barCount: number
   candidateCount: number
+  styleId: DrumStyleSelect
+  arrangeMode: DrumArrangeMode
   candidates: DrumPhrase[]
   stage: DrumPhrase[]
 }
@@ -198,6 +229,7 @@ export function createDefaultChordsLayer(
     noteLabelMode: 'letter',
     qualityEnable: createDefaultQualityEnable(),
     rootEnable: createDefaultRootEnable(meta.scale),
+    playStyle: 'block',
   }
 }
 
@@ -217,9 +249,11 @@ export function createDefaultBassLayer(meta: ProjectMeta): BassLayerState {
 
 export function createDefaultDrumsLayer(): DrumsLayerState {
   return {
-    density: 50,
+    density: 45,
     barCount: 2,
     candidateCount: 6,
+    styleId: 'any',
+    arrangeMode: 'mixed',
     candidates: [],
     stage: [],
   }
@@ -232,11 +266,15 @@ export const LAYER_LABELS: Record<LayerKind, string> = {
   drums: 'リズム',
 }
 
-export const LAYER_ROUTES: { kind: LayerKind | 'arrange'; path: string; label: string }[] =
-  [
+export const LAYER_ROUTES: {
+  kind: LayerKind | 'arrange' | 'start'
+  path: string
+  label: string
+}[] = [
+    { kind: 'start', path: '/layer/start', label: 'はじめる' },
     { kind: 'melody', path: '/layer/melody', label: 'メロディ' },
     { kind: 'chords', path: '/layer/chords', label: 'コード' },
     { kind: 'bass', path: '/layer/bass', label: 'ベース' },
     { kind: 'drums', path: '/layer/drums', label: 'リズム' },
-    { kind: 'arrange', path: '/layer/arrange', label: 'まとめ' },
+    { kind: 'arrange', path: '/layer/arrange', label: '出力' },
   ]

@@ -33,6 +33,19 @@
   color: var(--muted);
 }
 
+.autofill-stats {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--layer-ink, #1d2620);
+}
+
+.autofill-last {
+  font-weight: 600;
+  color: var(--layer-ink, #0f4038);
+}
+
 .layer-card-seq {
   margin: 0;
   font-size: 0.85rem;
@@ -245,12 +258,33 @@ button.danger,
   --layer-ink: #6b2424;
 }
 
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.export-actions .btn.primary {
+  min-width: 9rem;
+  padding: 10px 16px;
+  font-size: 1rem;
+}
+
 .layer-page--arrange {
   --accent: #555555;
   --layer-tint: #f7f7f7;
   --layer-card: #ffffff;
   --layer-score: #f0f0f0;
   --layer-ink: #333333;
+}
+
+.layer-page--autofill {
+  --accent: #1a6b5c;
+  --layer-tint: #e8f4f1;
+  --layer-card: #dff0eb;
+  --layer-score: #d2e8e2;
+  --layer-ink: #0f4038;
 }
 
 .layer-page--melody {
@@ -264,14 +298,16 @@ button.danger,
 .layer-page--chords .app__header h1,
 .layer-page--bass .app__header h1,
 .layer-page--drums .app__header h1,
-.layer-page--arrange .app__header h1 {
+.layer-page--arrange .app__header h1,
+.layer-page--autofill .app__header h1 {
   color: var(--layer-ink);
 }
 
 .layer-page--chords .app__section,
 .layer-page--bass .app__section,
 .layer-page--drums .app__section,
-.layer-page--arrange .app__section {
+.layer-page--arrange .app__section,
+.layer-page--autofill .app__section {
   background: var(--layer-tint);
   border-color: color-mix(in srgb, var(--accent) 22%, transparent);
 }
@@ -321,6 +357,7 @@ button.danger,
 .layer-page--bass .btn.primary,
 .layer-page--drums .btn.primary,
 .layer-page--arrange .btn.primary,
+.layer-page--autofill .btn.primary,
 .layer-page--chords button.primary,
 .layer-page--bass button.primary,
 .layer-page--drums button.primary,
@@ -338,7 +375,8 @@ button.danger,
 .layer-page--chords .btn--score,
 .layer-page--bass .btn--score,
 .layer-page--drums .btn--score,
-.layer-page--arrange .btn--score {
+.layer-page--arrange .btn--score,
+.layer-page--autofill .btn--score {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;

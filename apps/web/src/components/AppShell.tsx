@@ -1,10 +1,12 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { usePlayback } from '../audio/usePlayback'
 import { useProject } from '../core/ProjectContext'
 import { LAYER_ROUTES } from '../core/projectTypes'
 import { KEY_NAMES, keyOptionLabel } from '../core/scale'
 import './AppShell.css'
 
 function themeFromPath(pathname: string): string {
+  if (pathname.includes('/start')) return 'theme-start'
   if (pathname.includes('/chords')) return 'theme-chords'
   if (pathname.includes('/bass')) return 'theme-bass'
   if (pathname.includes('/drums')) return 'theme-drums'
@@ -14,6 +16,8 @@ function themeFromPath(pathname: string): string {
 
 function tabThemeClass(kind: string): string {
   switch (kind) {
+    case 'start':
+      return 'shell__tab--start'
     case 'chords':
       return 'shell__tab--chords'
     case 'bass':
@@ -31,6 +35,8 @@ export function AppShell() {
   const { draft, setMeta } = useProject()
   const location = useLocation()
   const theme = themeFromPath(location.pathname)
+  const hideTheoryMeta = location.pathname.includes('/start')
+  const { playing, stop } = usePlayback()
 
   return (
     <div className={`shell ${theme}`}>
@@ -38,12 +44,22 @@ export function AppShell() {
         <div className="shell__brand-row">
           <p className="shell__brand">なんとなく作曲</p>
           <nav className="shell__nav">
+            {playing && (
+              <button
+                type="button"
+                className="shell__stop"
+                onClick={() => void stop()}
+              >
+                停止
+              </button>
+            )}
             <Link to="/library" className="shell__nav-link">
               ライブラリ
             </Link>
           </nav>
         </div>
 
+        {!hideTheoryMeta && (
         <div className="shell__meta">
           <label>
             キー
@@ -88,6 +104,7 @@ export function AppShell() {
             />
           </label>
         </div>
+        )}
 
         <nav className="shell__tabs" aria-label="レイヤ">
           {LAYER_ROUTES.map((tab) => {

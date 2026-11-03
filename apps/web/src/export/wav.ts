@@ -1,14 +1,24 @@
 import * as Tone from 'tone'
 import { DURATION_BEATS } from '../core/rhythm'
-import { chordPitches } from '../core/chords/theory'
+import {
+  expandChordBarPlay,
+  resolveChordPlayStyle,
+} from '../core/chords/playStyle'
 import type {
   ChordBar,
+  ChordPlayStyleId,
   DrumPhrase,
   LayerIncludeState,
   LayerKind,
   MixerState,
 } from '../core/projectTypes'
 import type { Phrase } from '../core/types'
+import {
+  createDefaultTones,
+  type ToneId,
+  type ToneMap,
+} from '../core/tones/presets'
+import { createBass, createChordVoices, createLead } from '../audio/voices'
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {
   const numChannels = buffer.numberOfChannels
@@ -131,13 +141,11 @@ function toAudioBuffer(rendered: unknown): AudioBuffer {
 function scheduleMonoMelody(
   phrases: Phrase[],
   volume: number,
+  tone: ToneId,
 ): void {
   if (volume <= 0 || phrases.length === 0) return
   const gain = new Tone.Gain(volume).toDestination()
-  const synth = new Tone.Synth({
-    oscillator: { type: 'triangle' },
-    envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.25 },
-  }).connect(gain)
+  const synth = createLead(tone).connect(gain)
   let t = 0
   for (const phrase of phrases) {
     const beatSec = 60 / Math.max(1, phrase.bpm)
@@ -152,43 +160,38 @@ function scheduleMonoMelody(
   }
 }
 
-function scheduleChords(chords: ChordBar[], volume: number): void {
+function scheduleChords(
+  chords: ChordBar[],
+  volume: number,
+  playStyle: ChordPlayStyleId = 'block',
+  tone: ToneId = 'piano',
+): void {
   if (volume <= 0 || chords.length === 0) return
   const gain = new Tone.Gain(volume).toDestination()
-  // Use 3 separate Synths to avoid PolySynth Offline quirks
-  const s1 = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.02, decay: 0.25, sustain: 0.4, release: 0.35 },
-  }).connect(gain)
-  const s2 = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.02, decay: 0.25, sustain: 0.4, release: 0.35 },
-  }).connect(gain)
-  const s3 = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.02, decay: 0.25, sustain: 0.4, release: 0.35 },
-  }).connect(gain)
-  const voices = [s1, s2, s3]
+  // Separate synths to avoid PolySynth Offline quirks
+  const voices = createChordVoices(tone, 4).map((synth) => synth.connect(gain))
   let t = 0
   for (const bar of chords) {
     const beatSec = 60 / Math.max(1, bar.bpm)
     const durSec = 4 * beatSec
-    const pitches = chordPitches(bar)
-    pitches.forEach((p, i) => {
-      const freq = Tone.Frequency(p, 'midi').toFrequency()
-      voices[i]?.triggerAttackRelease(freq, Math.max(0.1, durSec * 0.95), t)
-    })
+    const style = resolveChordPlayStyle(playStyle)
+    const events = expandChordBarPlay(bar, style)
+    for (const ev of events) {
+      const gate = Math.max(0.05, ev.durationBeats * beatSec * 0.95)
+      const at = t + ev.timeBeat * beatSec
+      ev.pitches.forEach((p, i) => {
+        const freq = Tone.Frequency(p, 'midi').toFrequency()
+        voices[i % voices.length]!.triggerAttackRelease(freq, gate, at)
+      })
+    }
     t += durSec
   }
 }
 
-function scheduleBass(phrases: Phrase[], volume: number): void {
+function scheduleBass(phrases: Phrase[], volume: number, tone: ToneId): void {
   if (volume <= 0 || phrases.length === 0) return
   const gain = new Tone.Gain(volume * 2.2).toDestination()
-  const synth = new Tone.Synth({
-    oscillator: { type: 'triangle' },
-    envelope: { attack: 0.005, decay: 0.01, sustain: 1, release: 0.03 },
-  }).connect(gain)
+  const synth = createBass(tone).connect(gain)
   let t = 0
   for (let pi = 0; pi < phrases.length; pi++) {
     const phrase = phrases[pi]!
@@ -264,17 +267,28 @@ function scheduleDrums(phrases: DrumPhrase[], volume: number): void {
 export async function renderMixWavBlob(
   layers: WavLayers,
   mixer: MixerState,
+  chordPlayStyle: ChordPlayStyleId = 'block',
+  tones: ToneMap = createDefaultTones(),
 ): Promise<Blob> {
   const duration = mixDurationSec(layers)
   const rendered = await Tone.Offline(() => {
     if (layers.melody?.length) {
-      scheduleMonoMelody(layers.melody, audibleGain('melody', mixer))
+      scheduleMonoMelody(
+        layers.melody,
+        audibleGain('melody', mixer),
+        tones.melody,
+      )
     }
     if (layers.chords?.length) {
-      scheduleChords(layers.chords, audibleGain('chords', mixer))
+      scheduleChords(
+        layers.chords,
+        audibleGain('chords', mixer),
+        chordPlayStyle,
+        tones.chords,
+      )
     }
     if (layers.bass?.length) {
-      scheduleBass(layers.bass, audibleGain('bass', mixer))
+      scheduleBass(layers.bass, audibleGain('bass', mixer), tones.bass)
     }
     if (layers.drums?.length) {
       scheduleDrums(layers.drums, audibleGain('drums', mixer))
@@ -288,13 +302,13 @@ function totalDurationSec(phrases: Phrase[]): number {
   return Math.max(0.5, phraseDurationSec(phrases) + 0.35)
 }
 
-export async function renderWavBlob(phrases: Phrase[]): Promise<Blob> {
+export async function renderWavBlob(
+  phrases: Phrase[],
+  tone: ToneId = 'piano',
+): Promise<Blob> {
   const duration = totalDurationSec(phrases)
   const rendered = await Tone.Offline(() => {
-    const synth = new Tone.Synth({
-      oscillator: { type: 'triangle' },
-      envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.25 },
-    }).toDestination()
+    const synth = createLead(tone).toDestination()
 
     let t = 0
     for (const phrase of phrases) {
@@ -316,8 +330,9 @@ export async function renderWavBlob(phrases: Phrase[]): Promise<Blob> {
 export async function downloadWav(
   phrases: Phrase[],
   filename = 'melody.wav',
+  tone: ToneId = 'piano',
 ): Promise<void> {
-  const blob = await renderWavBlob(phrases)
+  const blob = await renderWavBlob(phrases, tone)
   triggerDownload(blob, filename)
 }
 
@@ -325,6 +340,8 @@ export async function downloadMixWav(
   layers: WavLayers,
   mixer: MixerState,
   filename = 'arrangement.wav',
+  chordPlayStyle: ChordPlayStyleId = 'block',
+  tones: ToneMap = createDefaultTones(),
 ): Promise<void> {
   const hasAny =
     (layers.melody?.length ?? 0) > 0 ||
@@ -334,7 +351,7 @@ export async function downloadMixWav(
   if (!hasAny) {
     throw new Error('書き出すレイヤが空です')
   }
-  const blob = await renderMixWavBlob(layers, mixer)
+  const blob = await renderMixWavBlob(layers, mixer, chordPlayStyle, tones)
   triggerDownload(blob, filename)
 }
 

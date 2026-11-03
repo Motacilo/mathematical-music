@@ -1,13 +1,20 @@
 import { useState } from 'react'
-import { playPhrases, stopPlayback } from '../audio/player'
+import { playPhrases } from '../audio/player'
+import { ArrangeModal } from '../components/ArrangeModal'
+import { PlayStopButton } from '../components/PlayStopButton'
 import { KeySyncCheckbox } from '../components/KeySyncCheckbox'
 import { PhraseRoll } from '../components/PhraseRoll'
+import {
+  generatePhraseArrangeVariants,
+  type PhraseArrangeVariant,
+} from '../core/arrange/variants'
 import { generateBassCandidates } from '../core/bass/generate'
 import { uid } from '../core/chords/theory'
 import { useProject } from '../core/ProjectContext'
+import { labelsForPhrases } from '../core/sections/timeline'
 import { RHYTHM_LABELS } from '../core/rhythm'
 import { splitPhraseIntoBars } from '../core/phraseSplit'
-import type { RhythmId } from '../core/types'
+import type { Phrase, RhythmId } from '../core/types'
 import '../pages/ComposerPage.css'
 import '../components/CandidatePool.css'
 import '../components/Stage.css'
@@ -24,7 +31,15 @@ export default function BassPage() {
   const bass = draft.bass
   const { keyRoot, scale } = effectiveKey('bass')
   const bpm = draft.meta.bpm
-  const [playing, setPlaying] = useState(false)
+  const [arrangeSource, setArrangeSource] = useState<Phrase | null>(null)
+  const [arrangeVariants, setArrangeVariants] = useState<PhraseArrangeVariant[]>(
+    [],
+  )
+
+  const openArrange = (phrase: Phrase) => {
+    setArrangeSource(phrase)
+    setArrangeVariants(generatePhraseArrangeVariants(phrase, 5))
+  }
 
   const generate = () => {
     if (bass.mode === 'follow' && draft.chords.stage.length === 0) {
@@ -60,10 +75,29 @@ export default function BassPage() {
 
   return (
     <div className="app layer-page layer-page--bass">
+      {arrangeSource && (
+        <ArrangeModal
+          title="ベースのちょいアレンジ"
+          sourcePreview={<PhraseRoll phrase={arrangeSource} />}
+          variants={arrangeVariants}
+          onClose={() => setArrangeSource(null)}
+          onRefresh={() =>
+            setArrangeVariants(generatePhraseArrangeVariants(arrangeSource, 5))
+          }
+          onPreview={(v) => {
+            void playPhrases([v.phrase], undefined, 'bass', draft.tones)
+          }}
+          onAdd={(v) => {
+            addToStage(v.phrase)
+            setArrangeSource(null)
+          }}
+          renderVariant={(v) => <PhraseRoll phrase={v.phrase} />}
+        />
+      )}
       <header className="app__header">
         <h1>雰囲気ベース</h1>
         <p className="app__lead">
-          コード追従（ルート／5度／歩行）か、キー内のランダム低音から候補を出します。追加する小節数を選べます。
+          コード追従（ルート／5度／歩行）か、キー内のランダム低音から候補を出します。候補をタップするとちょいアレンジ案が出ます。
         </p>
         <KeySyncCheckbox layer="bass" />
       </header>
@@ -154,15 +188,6 @@ export default function BassPage() {
           <button type="button" className="btn primary" onClick={generate}>
             生成
           </button>
-          {playing && (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void stopPlayback().then(() => setPlaying(false))}
-            >
-              停止
-            </button>
-          )}
         </div>
         {bass.mode === 'follow' && (
           <p className="layer-hint">
@@ -188,20 +213,36 @@ export default function BassPage() {
           <div className="candidate-pool-wrap">
             <div className="candidate-pool">
               {bass.candidates.map((ph, i) => (
-                <article key={ph.id} className="candidate-card">
+                <article
+                  key={ph.id}
+                  className="candidate-card candidate-card--arrangeable"
+                  onClick={() => openArrange(ph)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      openArrange(ph)
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  title="タップでちょいアレンジ"
+                >
                   <header className="candidate-card__head">
                     <span className="candidate-card__label">
                       候補 {i + 1} · {ph.bars}小節
                     </span>
-                    <div className="candidate-card__actions">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPlaying(true)
-                          void playPhrases([ph], () => setPlaying(false), 'bass')
+                    <div
+                      className="candidate-card__actions"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <PlayStopButton
+                        label="聴く"
+                        onPlay={() => {
+                          void playPhrases([ph], undefined, 'bass', draft.tones)
                         }}
-                      >
-                        聴く
+                      />
+                      <button type="button" onClick={() => openArrange(ph)}>
+                        アレンジ
                       </button>
                       <button
                         type="button"
@@ -224,17 +265,14 @@ export default function BassPage() {
         <div className="app__section-head">
           <h2>ベース譜面</h2>
           <div className="app__score-actions-row">
-            <button
-              type="button"
+            <PlayStopButton
+              label="譜面を再生"
               className="btn btn--score"
               disabled={bass.stage.length === 0}
-              onClick={() => {
-                setPlaying(true)
-                void playPhrases(bass.stage, () => setPlaying(false), 'bass')
+              onPlay={() => {
+                void playPhrases(bass.stage, undefined, 'bass', draft.tones)
               }}
-            >
-              譜面を再生
-            </button>
+            />
             <button
               type="button"
               className="btn btn--danger"
@@ -255,24 +293,24 @@ export default function BassPage() {
         ) : (
           <div className="stage-wrap">
             <ul className="stage__list">
-              {bass.stage.map((ph, i) => (
+              {bass.stage.map((ph, i) => {
+                const sectionName = labelsForPhrases(draft.sections, bass.stage)[i]
+                return (
                 <li key={ph.id} className="stage__item">
                   <div className="stage__item-meta">
-                    <span className="stage__item-title">小節 {i + 1}</span>
+                    <span className="stage__item-title">
+                      小節 {i + 1}
+                      {sectionName && (
+                        <span className="stage__section-tag">{sectionName}</span>
+                      )}
+                    </span>
                     <div className="stage__item-actions">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPlaying(true)
-                          void playPhrases(
-                            [ph],
-                            () => setPlaying(false),
-                            'bass',
-                          )
+                      <PlayStopButton
+                        label="聴く"
+                        onPlay={() => {
+                          void playPhrases([ph], undefined, 'bass', draft.tones)
                         }}
-                      >
-                        聴く
-                      </button>
+                      />
                       <button
                         type="button"
                         className="danger"
@@ -289,7 +327,8 @@ export default function BassPage() {
                   </div>
                   <PhraseRoll phrase={ph} />
                 </li>
-              ))}
+                )
+              })}
             </ul>
           </div>
         )}

@@ -6,7 +6,7 @@ import {
   zeroOutOfKeyWeights,
 } from './distributionWeights'
 
-export type Duration = '16n' | '8n' | '4n' | '2n' | '8n.' | '4n.'
+export type Duration = '16n' | '8n' | '4n' | '2n' | '1n' | '8n.' | '4n.'
 
 export type ScaleType = 'major' | 'minor'
 

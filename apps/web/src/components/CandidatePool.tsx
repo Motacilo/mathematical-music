@@ -1,3 +1,4 @@
+import { PlayStopButton } from './PlayStopButton'
 import type { Phrase } from '../core/types'
 import { PhraseRoll } from './PhraseRoll'
 import './CandidatePool.css'
@@ -8,6 +9,8 @@ interface CandidatePoolProps {
   onPreview: (phrase: Phrase) => void
   onAdd: (phrase: Phrase) => void
   onFavorite: (phrase: Phrase) => void
+  /** Open arrange modal for this candidate */
+  onArrange?: (phrase: Phrase) => void
 }
 
 export function CandidatePool({
@@ -16,6 +19,7 @@ export function CandidatePool({
   onPreview,
   onAdd,
   onFavorite,
+  onArrange,
 }: CandidatePoolProps) {
   if (candidates.length === 0) {
     return (
@@ -26,7 +30,7 @@ export function CandidatePool({
             上の設定でモードとキーを選び、「生成」を押すと、フレーズ候補（1〜4小節）がここに並びます。
           </p>
           <p className="candidate-pool__empty-tip">
-            枠の最小幅を保ったまま列数が変わります。1〜2小節は最大8件、3〜4小節は最大4件。「譜面へ」で小節ごとに追加されます。
+            枠の最小幅を保ったまま列数が変わります。1〜2小節は最大8件、3〜4小節は最大4件。「譜面へ」で小節ごとに追加されます。カードをタップするとちょいアレンジ案が開きます。
           </p>
         </div>
       </div>
@@ -39,13 +43,39 @@ export function CandidatePool({
         {candidates.map((phrase, i) => {
           const favorited = favoritedIds.has(phrase.id)
           return (
-            <article key={phrase.id} className="candidate-card">
+            <article
+              key={phrase.id}
+              className={`candidate-card${onArrange ? ' candidate-card--arrangeable' : ''}`}
+              onClick={onArrange ? () => onArrange(phrase) : undefined}
+              onKeyDown={
+                onArrange
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        onArrange(phrase)
+                      }
+                    }
+                  : undefined
+              }
+              role={onArrange ? 'button' : undefined}
+              tabIndex={onArrange ? 0 : undefined}
+              title={onArrange ? 'タップでちょいアレンジ' : undefined}
+            >
               <header className="candidate-card__head">
                 <span className="candidate-card__label">候補 {i + 1}</span>
-                <div className="candidate-card__actions">
-                  <button type="button" onClick={() => onPreview(phrase)}>
-                    聴く
-                  </button>
+                <div
+                  className="candidate-card__actions"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <PlayStopButton
+                    label="聴く"
+                    onPlay={() => onPreview(phrase)}
+                  />
+                  {onArrange && (
+                    <button type="button" onClick={() => onArrange(phrase)}>
+                      アレンジ
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`fav${favorited ? ' is-saved' : ''}`}

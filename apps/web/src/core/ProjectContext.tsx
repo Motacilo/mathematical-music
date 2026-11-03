@@ -8,20 +8,33 @@ import {
   type ReactNode,
 } from 'react'
 import { transposePhrases } from './transpose'
+import { createDefaultRootEnable } from './chords/roots'
+import { sampleMoodSetup, type MoodPreset } from './mood/presets'
 import {
   readProjectDraft,
   writeProjectDraft,
   type ProjectDraft,
 } from './projectStore'
-import type {
-  BassLayerState,
-  ChordsLayerState,
-  DrumsLayerState,
-  KeySyncState,
-  LayerIncludeState,
-  MixerState,
-  ProjectMeta,
+import {
+  createDefaultQualityEnable,
+  type BassLayerState,
+  type ChordsLayerState,
+  type DrumsLayerState,
+  type KeySyncState,
+  type LayerIncludeState,
+  type MixerState,
+  type ProjectMeta,
 } from './projectTypes'
+import { createDefaultDistribution } from './types'
+import type { ToneMap } from './tones/presets'
+import type { SectionCandidate } from './sections/generate'
+import {
+  appendSection,
+  clearSong,
+  removeSection,
+  replaceSection,
+  replaceWithSections,
+} from './sections/timeline'
 import type { ComposerDraft } from './composerDraft'
 import type { ChordBar } from './projectTypes'
 import { keySemitoneDelta } from './transpose'
@@ -32,10 +45,19 @@ type ProjectContextValue = {
   setMixer: (mixer: MixerState) => void
   setLayerInclude: (patch: Partial<LayerIncludeState>) => void
   setKeySync: (patch: Partial<KeySyncState>) => void
-  setMelody: (melody: ComposerDraft) => void
+  setMelody: (
+    melody: ComposerDraft | ((m: ComposerDraft) => ComposerDraft),
+  ) => void
   setChords: (chords: ChordsLayerState | ((c: ChordsLayerState) => ChordsLayerState)) => void
   setBass: (bass: BassLayerState | ((b: BassLayerState) => BassLayerState)) => void
   setDrums: (drums: DrumsLayerState | ((d: DrumsLayerState) => DrumsLayerState)) => void
+  setTones: (patch: Partial<ToneMap>) => void
+  beginWithMood: (mood: MoodPreset) => void
+  appendSongSection: (block: SectionCandidate) => void
+  replaceWithFullSong: (blocks: readonly SectionCandidate[]) => void
+  replaceSongSection: (sectionId: string, block: SectionCandidate) => void
+  removeSongSection: (sectionId: string) => void
+  clearSongSections: () => void
   effectiveKey: (layer: 'melody' | 'chords' | 'bass') => {
     keyRoot: number
     scale: ProjectMeta['scale']
@@ -221,9 +243,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const setMelody = useCallback((melody: ComposerDraft) => {
-    setDraft((p) => ({ ...p, melody }))
-  }, [])
+  const setMelody = useCallback(
+    (
+      melody: ComposerDraft | ((m: ComposerDraft) => ComposerDraft),
+    ) => {
+      setDraft((p) => ({
+        ...p,
+        melody: typeof melody === 'function' ? melody(p.melody) : melody,
+      }))
+    },
+    [],
+  )
 
   const setChords = useCallback(
     (
@@ -263,6 +293,101 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const setTones = useCallback((patch: Partial<ToneMap>) => {
+    setDraft((p) => ({ ...p, tones: { ...p.tones, ...patch } }))
+  }, [])
+
+  const beginWithMood = useCallback((mood: MoodPreset) => {
+    setDraft((prev) => {
+      const setup = sampleMoodSetup(mood)
+      const meta: ProjectMeta = {
+        keyRoot: setup.keyRoot,
+        scale: setup.scale,
+        bpm: setup.bpm,
+      }
+      const cleared = clearSong(prev)
+      const mel = cleared.melody
+      return {
+        ...cleared,
+        moodId: mood.id,
+        meta,
+        keySync: { melody: true, chords: true, bass: true },
+        layerInclude: { melody: true, chords: true, bass: true, drums: true },
+        mixer: {
+          ...cleared.mixer,
+          mute: { melody: false, chords: false, bass: false, drums: false },
+          solo: { melody: false, chords: false, bass: false, drums: false },
+        },
+        melody: {
+          ...mel,
+          settings: {
+            ...mel.settings,
+            keyRoot: meta.keyRoot,
+            scale: meta.scale,
+            bpm: meta.bpm,
+          },
+          distribution: createDefaultDistribution(
+            meta.keyRoot,
+            mel.settings.octave,
+            meta.scale,
+          ),
+          candidates: [],
+          stage: [],
+          bpmInput: String(meta.bpm),
+          candidateKeyRoot: meta.keyRoot,
+          candidateBpm: meta.bpm,
+          candidateBpmInput: String(meta.bpm),
+          stageBpmInput: String(meta.bpm),
+        },
+        chords: {
+          ...cleared.chords,
+          keyRoot: meta.keyRoot,
+          scale: meta.scale,
+          playStyle: mood.playStyle,
+          candidates: [],
+          stage: [],
+          qualityEnable: createDefaultQualityEnable(),
+          rootEnable: createDefaultRootEnable(meta.scale),
+        },
+        bass: {
+          ...cleared.bass,
+          mode: 'follow',
+          keyRoot: meta.keyRoot,
+          scale: meta.scale,
+          candidates: [],
+          stage: [],
+        },
+        drums: {
+          ...cleared.drums,
+          styleId: mood.drumStyles[0] ?? 'any',
+          candidates: [],
+          stage: [],
+        },
+        sections: [],
+      }
+    })
+  }, [])
+
+  const appendSongSection = useCallback((block: SectionCandidate) => {
+    setDraft((prev) => appendSection(prev, block))
+  }, [])
+
+  const replaceWithFullSong = useCallback((blocks: readonly SectionCandidate[]) => {
+    setDraft((prev) => replaceWithSections(prev, blocks))
+  }, [])
+
+  const replaceSongSection = useCallback((sectionId: string, block: SectionCandidate) => {
+    setDraft((prev) => replaceSection(prev, sectionId, block))
+  }, [])
+
+  const removeSongSection = useCallback((sectionId: string) => {
+    setDraft((prev) => removeSection(prev, sectionId))
+  }, [])
+
+  const clearSongSections = useCallback(() => {
+    setDraft((prev) => clearSong(prev))
+  }, [])
+
   const effectiveKey = useCallback(
     (layer: 'melody' | 'chords' | 'bass') => {
       if (draft.keySync[layer]) {
@@ -293,6 +418,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       setChords,
       setBass,
       setDrums,
+      setTones,
+      beginWithMood,
+      appendSongSection,
+      replaceWithFullSong,
+      replaceSongSection,
+      removeSongSection,
+      clearSongSections,
       effectiveKey,
     }),
     [
@@ -305,6 +437,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       setChords,
       setBass,
       setDrums,
+      setTones,
+      beginWithMood,
+      appendSongSection,
+      replaceWithFullSong,
+      replaceSongSection,
+      removeSongSection,
+      clearSongSections,
       effectiveKey,
     ],
   )

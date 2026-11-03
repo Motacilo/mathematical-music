@@ -4,6 +4,12 @@ import { chordPitches } from '../core/chords/theory'
 import { drumInstrumentMidi } from '../core/drums/generate'
 import type { ChordBar, DrumPhrase } from '../core/projectTypes'
 import type { Phrase } from '../core/types'
+import {
+  createDefaultTones,
+  gmProgram,
+  type ToneId,
+  type ToneMap,
+} from '../core/tones/presets'
 
 export type MidiLayers = {
   melody?: Phrase[]
@@ -17,11 +23,13 @@ function addPhraseTrack(
   name: string,
   channel: number,
   phrases: Phrase[],
+  program: number,
 ): void {
   if (!phrases.length) return
   const track = midi.addTrack()
   track.name = name
   track.channel = channel
+  track.instrument.number = program
   const ppq = midi.header.ppq
   let tick = 0
   let lastBpm = phrases[0]?.bpm ?? 120
@@ -46,11 +54,12 @@ function addPhraseTrack(
   }
 }
 
-function addChordTrack(midi: Midi, chords: ChordBar[]): void {
+function addChordTrack(midi: Midi, chords: ChordBar[], program: number): void {
   if (!chords.length) return
   const track = midi.addTrack()
   track.name = 'Chords'
   track.channel = 1
+  track.instrument.number = program
   const ppq = midi.header.ppq
   let tick = 0
   for (const bar of chords) {
@@ -90,7 +99,10 @@ function addDrumTrack(midi: Midi, phrases: DrumPhrase[]): void {
   }
 }
 
-export function buildMultiTrackMidiBlob(layers: MidiLayers): Blob {
+export function buildMultiTrackMidiBlob(
+  layers: MidiLayers,
+  tones: ToneMap = createDefaultTones(),
+): Blob {
   const midi = new Midi()
   const bpm =
     layers.melody?.[0]?.bpm ??
@@ -105,32 +117,43 @@ export function buildMultiTrackMidiBlob(layers: MidiLayers): Blob {
     measures: 0,
   })
 
-  if (layers.melody?.length) addPhraseTrack(midi, 'Melody', 0, layers.melody)
-  if (layers.chords?.length) addChordTrack(midi, layers.chords)
-  if (layers.bass?.length) addPhraseTrack(midi, 'Bass', 2, layers.bass)
+  if (layers.melody?.length) {
+    addPhraseTrack(midi, 'Melody', 0, layers.melody, gmProgram('melody', tones.melody))
+  }
+  if (layers.chords?.length) {
+    addChordTrack(midi, layers.chords, gmProgram('chords', tones.chords))
+  }
+  if (layers.bass?.length) {
+    addPhraseTrack(midi, 'Bass', 2, layers.bass, gmProgram('bass', tones.bass))
+  }
   if (layers.drums?.length) addDrumTrack(midi, layers.drums)
 
   const bytes = new Uint8Array(midi.toArray())
   return new Blob([bytes], { type: 'audio/midi' })
 }
 
-export function buildMidiBlob(phrases: Phrase[]): Blob {
-  return buildMultiTrackMidiBlob({ melody: phrases })
+export function buildMidiBlob(phrases: Phrase[], tone: ToneId = 'piano'): Blob {
+  return buildMultiTrackMidiBlob(
+    { melody: phrases },
+    { ...createDefaultTones(), melody: tone },
+  )
 }
 
 export function downloadMidi(
   phrases: Phrase[],
   filename = 'melody.mid',
+  tone: ToneId = 'piano',
 ): void {
-  const blob = buildMidiBlob(phrases)
+  const blob = buildMidiBlob(phrases, tone)
   triggerDownload(blob, filename)
 }
 
 export function downloadMultiTrackMidi(
   layers: MidiLayers,
   filename = 'arrangement.mid',
+  tones: ToneMap = createDefaultTones(),
 ): void {
-  triggerDownload(buildMultiTrackMidiBlob(layers), filename)
+  triggerDownload(buildMultiTrackMidiBlob(layers, tones), filename)
 }
 
 function triggerDownload(blob: Blob, filename: string): void {

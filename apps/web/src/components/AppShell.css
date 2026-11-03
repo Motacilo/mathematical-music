@@ -29,6 +29,26 @@
   font-weight: 700;
 }
 
+.shell__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.shell__stop {
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, #000);
+  background: var(--accent);
+  cursor: pointer;
+}
+
 .shell__nav-link {
   font-size: 0.85rem;
   font-weight: 600;
@@ -36,7 +56,7 @@
   text-decoration: none;
   padding: 5px 10px;
   border-radius: 4px;
-  border: 1px solid rgba(47, 111, 78, 0.35);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   background: rgba(255, 255, 255, 0.65);
 }
 
@@ -84,6 +104,10 @@
   border: 1px solid transparent;
 }
 
+.shell__tab--start {
+  --tab-accent: #c45c26;
+  --tab-bg: #f8efe6;
+}
 .shell__tab--melody {
   --tab-accent: #2f6f4e;
   --tab-bg: #e8f2eb;
@@ -132,6 +156,10 @@
 .shell.theme-arrange {
   --accent: #555555;
   --muted: #6a6a6a;
+}
+.shell.theme-start {
+  --accent: #c45c26;
+  --muted: #7a5a48;
 }
 .shell.theme-melody {
   --accent: #2f6f4e;

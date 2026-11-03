@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { playPhrase, playPhrases, stopPlayback } from '../audio/player'
+import { PlayStopButton } from '../components/PlayStopButton'
+import { playPhrase, playPhrases } from '../audio/player'
 import { AppFooter } from '../components/AppFooter'
 import { KeySyncCheckbox } from '../components/KeySyncCheckbox'
+import { ArrangeModal } from '../components/ArrangeModal'
 import { CandidatePool } from '../components/CandidatePool'
+import { PhraseRoll } from '../components/PhraseRoll'
+import {
+  generatePhraseArrangeVariants,
+  type PhraseArrangeVariant,
+} from '../core/arrange/variants'
 import { Controls } from '../components/Controls'
 import { SectionTuneBar } from '../components/SectionTuneBar'
 import { Stage } from '../components/Stage'
@@ -21,6 +28,7 @@ import {
   type ComposerDraft,
 } from '../core/composerDraft'
 import { useProject } from '../core/ProjectContext'
+import { labelsForPhrases } from '../core/sections/timeline'
 import { readProjectDraft } from '../core/projectStore'
 import { splitPhraseIntoBars } from '../core/phraseSplit'
 import {
@@ -95,7 +103,6 @@ export default function ComposerPage() {
     phraseIndex: number
     noteIndex: number
   } | null>(null)
-  const [playing, setPlaying] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [bpmInput, setBpmInput] = useState(
     () => boot?.bpmInput ?? String(DEFAULT_BPM),
@@ -123,6 +130,20 @@ export default function ComposerPage() {
   const [clearConfirm, setClearConfirm] = useState<null | 'candidates' | 'stage'>(
     null,
   )
+  const [arrangeSource, setArrangeSource] = useState<Phrase | null>(null)
+  const [arrangeVariants, setArrangeVariants] = useState<PhraseArrangeVariant[]>(
+    [],
+  )
+
+  const openArrange = useCallback((phrase: Phrase) => {
+    setArrangeSource(phrase)
+    setArrangeVariants(generatePhraseArrangeVariants(phrase, 5))
+  }, [])
+
+  const refreshArrange = useCallback(() => {
+    if (!arrangeSource) return
+    setArrangeVariants(generatePhraseArrangeVariants(arrangeSource, 5))
+  }, [arrangeSource])
 
   useEffect(() => {
     const draft: ComposerDraft = {
@@ -372,30 +393,23 @@ export default function ComposerPage() {
 
   const handlePlayAll = async () => {
     if (stage.length === 0) return
-    setPlaying(true)
-    await playPhrases(stage, () => setPlaying(false))
+    await playPhrases(stage, undefined, 'melody', projectDraft.tones)
   }
 
   const handlePreview = async (phrase: Phrase) => {
-    setPlaying(true)
-    await playPhrase(phrase, () => setPlaying(false))
-  }
-
-  const handleStop = async () => {
-    await stopPlayback()
-    setPlaying(false)
+    await playPhrase(phrase, undefined, projectDraft.tones)
   }
 
   const handleMidi = () => {
     if (stage.length === 0) return
-    downloadMidi(stage)
+    downloadMidi(stage, 'melody.mid', projectDraft.tones.melody)
   }
 
   const handleWav = async () => {
     if (stage.length === 0) return
     setExporting(true)
     try {
-      await downloadWav(stage)
+      await downloadWav(stage, 'melody.wav', projectDraft.tones.melody)
     } finally {
       setExporting(false)
     }
@@ -453,6 +467,21 @@ export default function ComposerPage() {
 
   return (
     <div className="app layer-page layer-page--melody">
+      {arrangeSource && (
+        <ArrangeModal
+          title="メロディのちょいアレンジ"
+          sourcePreview={<PhraseRoll phrase={arrangeSource} />}
+          variants={arrangeVariants}
+          onClose={() => setArrangeSource(null)}
+          onRefresh={refreshArrange}
+          onPreview={(v) => void handlePreview(v.phrase)}
+          onAdd={(v) => {
+            onAdd(v.phrase)
+            setArrangeSource(null)
+          }}
+          renderVariant={(v) => <PhraseRoll phrase={v.phrase} />}
+        />
+      )}
       {clearConfirm && (
         <div
           className="app__confirm"
@@ -618,6 +647,7 @@ export default function ComposerPage() {
           onPreview={handlePreview}
           onAdd={onAdd}
           onFavorite={onFavorite}
+          onArrange={openArrange}
         />
       </section>
 
@@ -634,20 +664,12 @@ export default function ComposerPage() {
           </div>
           <div className="app__score-actions">
             <div className="app__score-actions-row">
-              {playing ? (
-                <button type="button" className="btn" onClick={handleStop}>
-                  停止
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn--score"
-                  onClick={handlePlayAll}
-                  disabled={stage.length === 0}
-                >
-                  譜面を再生
-                </button>
-              )}
+              <PlayStopButton
+                label="譜面を再生"
+                className="btn btn--score"
+                disabled={stage.length === 0}
+                onPlay={() => void handlePlayAll()}
+              />
               <button
                 type="button"
                 className={`btn${scoreSaved ? ' btn--saved' : ''}`}
@@ -708,6 +730,7 @@ export default function ComposerPage() {
           onMove={onMove}
           onPhraseKeyChange={onPhraseKeyChange}
           onPhraseBpmChange={onPhraseBpmChange}
+          sectionLabels={labelsForPhrases(projectDraft.sections, stage)}
           onPlayPhrase={(pi) => {
             const phrase = stage[pi]
             if (phrase) void handlePreview(phrase)
