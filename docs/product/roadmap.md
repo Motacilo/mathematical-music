@@ -1,16 +1,38 @@
 # 雰囲気メロディ — 現状と拡張ロードマップ
 
-最終更新: 2026-09-04
+最終更新: 2026-11-03
 
-### 実装状況（2026-09）
+### 実装状況（2026-11）
 
-Phase 0–4 の初期実装済み（レイヤタブ・コード3モード・ベース・ドラム・まとめ再生・キー連動・マルチMIDI）。
+Phase 0–4 と Phase E の大半を実装済み。未着手は **URL 共有** と **コードの 2 拍単位** のみ。
 
-キー連動・まとめ再生の確定仕様:
+| # | 機能 | 状況 |
+|---|------|------|
+| 1 | コード進行 | ✅ ランダム／遷移確率／自由選択＋定番進行。弾き方 8 種（同時押し・パルス・アルペジオ等）。音名／ドレミ表示 |
+| 2 | リズム（ドラム） | ✅ Kick / Snare / HiHat。スタイル 7 種＋おまかせ。定番そのまま／ちょいアレンジ／混在 |
+| 3 | 音色プリセット | ✅ ピアノ／やわらかい／ギター（メロディ・コード・ベース別） |
+| 4 | ベース | ✅ コード追従／ランダム |
+| 5 | セクション構成 | ✅ イントロ・A・B・サビ・間奏・C・後奏。追加・差し替え・削除・区間再生 |
+| 6 | ムード | ✅ 明るい／切ない／疾走／おだやか／かっこいい（キー・BPM・音色・ドラム傾向を一括設定） |
+| 7 | MIDI マルチトラック | ✅ 出力タブ。含めるパートを選択可 |
+| 8 | 簡易ミキサー | ✅ 音量・ミュート・ソロ（再生と WAV 両方に反映） |
+| 9 | おまかせ1曲生成 | ✅ はじめるタブ「全おまかせ」（11 区間を一括生成） |
+| 10 | URL 共有 | ⬜ 未着手 |
+| – | ちょいアレンジ | ✅ 候補から高さ違い・数音変更などのバリエーション生成（ロードマップ外で追加） |
+
+確定仕様:
 
 - 「プロジェクトキーに合わせる」はメロディ／コード／ベース各タブ（既定 ON）
-- キー連動 OFF 時のまとめ再生は **そのまま再生＋警告のみ**
+- キー連動 OFF 時のまとめ再生・書き出しは **そのまま再生＋警告のみ**
 - コード時間単位は **1 小節に 1 コード**（2 拍は将来）
+- ムードを変更すると、いまの曲はクリアして作り直す
+
+### 次にやること
+
+1. URL 共有（プロジェクト状態を hash に圧縮）
+2. コードの 2 拍単位配置
+3. テスト（コード理論・タイムライン・MIDI 書き出しなど純粋ロジック）と CI での lint / 型チェック
+4. 成功指標（§9）の確認と、公開向けの OGP・デモ曲整備
 
 ## 1. 目的とスコープ
 
@@ -31,7 +53,7 @@ Phase 0–4 の初期実装済み（レイヤタブ・コード3モード・ベ�
 
 ### 2-1. プロダクト概要
 
-公開中のメイン機能は **雰囲気メロディ**（単旋律の生成・編集・書き出し）。
+「雰囲気を選ぶ → 候補を聴く → 並べる」でメロディ・コード・ベース・リズムの入った曲を作る Web アプリ。
 
 - 公開 URL: https://motacilo.com/mathematical-music/
 - 技術: TypeScript / React / Vite / Tone.js / `@tonejs/midi`
@@ -40,46 +62,46 @@ Phase 0–4 の初期実装済み（レイヤタブ・コード3モード・ベ�
 ### 2-2. ユーザーフロー（現状）
 
 ```
-設定（キー・スケール・BPM・リズム等）
-  → 生成（分布 / 数列）
-  → 候補を聴く・お気に入り
-  → 譜面へ（並べ替え・音高±・小節キー/BPM）
-  → 通し再生 / MIDI・WAV 書き出し / 譜面保存
-  → ライブラリから再呼び出し
+はじめる: 雰囲気・音色を選ぶ
+  → フレーズごと（区間を選んで 3 候補 → 追加／差し替え） or 全おまかせ（1 曲一括）
+  → 通しで聴く
+  → 各レイヤタブ（メロディ／コード／ベース／リズム）で微調整
+  → 出力: パート選択・ミキサー → WAV / マルチトラック MIDI
+  → ライブラリ: お気に入り・保存譜面の再呼び出し
 ```
 
-### 2-3. 実装済み機能
+タブ: はじめる / メロディ / コード / ベース / リズム / 出力（＋ライブラリ）
 
-| 領域 | 内容 |
-|------|------|
-| 生成 | 分布（ガウス等プリセット・完全ランダム含む）／数列（式・カンマ列）。1〜4 小節。休符確率 |
-| リズム | メロディ用スロット（四分・八分・十六分・混合）。4/4 固定。ノート単位のリズム編集 UI なし |
-| 編集 | 候補 → 譜面。並べ替え・削除・半音±。候補／譜面のキー・BPM 一括変更 |
-| 再生 | Tone.Synth（triangle）1 音色 |
-| 書き出し | MIDI 1 トラック `Melody`、WAV オフラインレンダ |
-| 永続化 | localStorage（下書き・お気に入り・保存譜面）。sessionStorage（ライブラリ→作曲の一時キュー） |
-| その他 | フッターにプライバシー（localStorage・GA4）への導線 |
-
-### 2-4. 主要ファイル
+### 2-3. 主要ファイル
 
 | パス | 役割 |
 |------|------|
-| `apps/web/src/core/types.ts` | `Note` / `Phrase` / `ProjectSettings` / 生成パラメータ |
-| `apps/web/src/core/rhythm.ts` | 4/4・リズムスロット解決 |
-| `apps/web/src/core/generators/` | 分布・数列生成 |
-| `apps/web/src/pages/ComposerPage.tsx` | 作曲メイン UI |
-| `apps/web/src/pages/LibraryPage.tsx` | お気に入り・保存譜面 |
-| `apps/web/src/audio/player.ts` | 再生 |
-| `apps/web/src/export/midi.ts` / `wav.ts` | 書き出し |
-| `apps/web/src/core/composerDraft.ts` / `libraryStore.ts` | 永続化 |
+| `apps/web/src/core/projectTypes.ts` | Project（draft v2）・レイヤ・ミキサー・タブ定義 |
+| `apps/web/src/core/ProjectContext.tsx` / `projectStore.ts` | プロジェクト状態と localStorage 永続化（v1→v2 移行） |
+| `apps/web/src/core/types.ts` / `rhythm.ts` / `scale.ts` | `Note` / `Phrase`・4/4 リズム・スケール |
+| `apps/web/src/core/generators/` | メロディ生成（分布・数列） |
+| `apps/web/src/core/chords/` | コード理論・生成・遷移確率・弾き方 |
+| `apps/web/src/core/bass/` / `drums/` | ベース・ドラム生成 |
+| `apps/web/src/core/sections/` | 区間（役割・生成・タイムライン） |
+| `apps/web/src/core/mood/` / `tones/` | ムード・音色プリセット |
+| `apps/web/src/core/autofill/` | おまかせ1曲生成 |
+| `apps/web/src/core/arrange/` | ちょいアレンジのバリエーション |
+| `apps/web/src/pages/` | StartPage / ComposerPage / ChordsPage / BassPage / DrumsPage / ArrangePage（出力）/ LibraryPage |
+| `apps/web/src/audio/` | 再生（player・音色 voices・PlaybackContext） |
+| `apps/web/src/export/midi.ts` / `wav.ts` | マルチトラック MIDI・ミックス WAV |
+| `apps/web/src/core/composerDraft.ts` / `libraryStore.ts` | 下書き・ライブラリ永続化 |
+
+### 2-4. 永続化
+
+- localStorage: プロジェクト下書き（v2）・お気に入り・保存譜面
+- sessionStorage: ライブラリ → 作曲の一時キュー
 
 ### 2-5. 現状のデータモデル（要約）
 
-- `Note`: pitch（MIDI）・duration・rest
-- `Phrase`: notes・bars(1–4)・bpm・keyRoot・scale — **メロディ塊が単位**
-- `GenMode`: `distribution` \| `sequence`（「完全ランダム」は分布プリセット）
+- `Note`: pitch（MIDI）・duration・rest／`Phrase`: notes・bars・bpm・keyRoot・scale
+- Project draft（version 2）: meta（キー・スケール・BPM）・moodId・tones・sections・各レイヤの候補／譜面・mixer・layerInclude
+- コードは `ChordBar`（1 小節 1 コード）、ドラムは `DrumPhrase`（kick / snare / hat スロット）
 - スケール: `major` \| `minor` のみ
-- プロジェクト全体を表す「マルチトラック」型は **未導入**
 
 ### 2-6. 初版で明示的に範囲外だったもの
 
@@ -181,7 +203,9 @@ flowchart TB
 
 ### Phase E 以降（後続）
 
-- 音色プリセット、セクション A/B、ムード、おまかせ1曲、URL 共有
+- ✅ 音色プリセット、セクション、ムード、おまかせ1曲、ちょいアレンジ
+- ⬜ URL 共有
+- ⬜ コード 2 拍単位
 
 ---
 
