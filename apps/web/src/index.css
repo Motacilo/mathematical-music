@@ -52,3 +52,9 @@ input,
 select {
   font-weight: 400;
 }
+
+.app-loading {
+  padding: 2rem 1rem;
+  text-align: center;
+  opacity: 0.6;
+}

@@ -43,8 +43,6 @@ import {
 } from '../core/distributionWeights'
 import { createDefaultDistribution, createDefaultSequence } from '../core/types'
 import type { GenMode, Phrase, ProjectSettings } from '../core/types'
-import { downloadMidi } from '../export/midi'
-import { downloadWav } from '../export/wav'
 import './ComposerPage.css'
 
 const DEFAULT_BPM = 160
@@ -402,13 +400,21 @@ export default function ComposerPage() {
 
   const handleMidi = () => {
     if (stage.length === 0) return
-    downloadMidi(stage, 'melody.mid', projectDraft.tones.melody)
+    void import('../export/midi')
+      .then(({ downloadMidi }) =>
+        downloadMidi(stage, 'melody.mid', projectDraft.tones.melody),
+      )
+      .catch((err: unknown) => {
+        console.error(err)
+        window.alert('MIDI の書き出しに失敗しました。')
+      })
   }
 
   const handleWav = async () => {
     if (stage.length === 0) return
     setExporting(true)
     try {
+      const { downloadWav } = await import('../export/wav')
       await downloadWav(stage, 'melody.wav', projectDraft.tones.melody)
     } finally {
       setExporting(false)

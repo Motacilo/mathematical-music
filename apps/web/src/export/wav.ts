@@ -8,7 +8,6 @@ import type {
   ChordBar,
   ChordPlayStyleId,
   DrumPhrase,
-  LayerIncludeState,
   LayerKind,
   MixerState,
 } from '../core/projectTypes'
@@ -19,6 +18,7 @@ import {
   type ToneMap,
 } from '../core/tones/presets'
 import { createBass, createChordVoices, createLead } from '../audio/voices'
+import type { WavLayers } from './layers'
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {
   const numChannels = buffer.numberOfChannels
@@ -95,12 +95,8 @@ function drumsDurationSec(phrases: DrumPhrase[]): number {
   return sec
 }
 
-export type WavLayers = {
-  melody?: Phrase[]
-  chords?: ChordBar[]
-  bass?: Phrase[]
-  drums?: DrumPhrase[]
-}
+export type { WavLayers } from './layers'
+export { filterLayersByInclude } from './layers'
 
 function mixDurationSec(layers: WavLayers): number {
   const raw = Math.max(
@@ -362,16 +358,4 @@ function triggerDownload(blob: Blob, filename: string): void {
   a.download = filename
   a.click()
   URL.revokeObjectURL(url)
-}
-
-export function filterLayersByInclude(
-  layers: WavLayers,
-  include: LayerIncludeState,
-): WavLayers {
-  return {
-    melody: include.melody && layers.melody?.length ? layers.melody : undefined,
-    chords: include.chords && layers.chords?.length ? layers.chords : undefined,
-    bass: include.bass && layers.bass?.length ? layers.bass : undefined,
-    drums: include.drums && layers.drums?.length ? layers.drums : undefined,
-  }
 }

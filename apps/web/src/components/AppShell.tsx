@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { usePlayback } from '../audio/usePlayback'
 import { useProject } from '../core/ProjectContext'
@@ -121,7 +122,9 @@ export function AppShell() {
           })}
         </nav>
       </header>
-      <Outlet />
+      <Suspense fallback={<p className="app-loading">読み込み中…</p>}>
+        <Outlet />
+      </Suspense>
     </div>
   )
 }

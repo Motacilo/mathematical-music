@@ -1,14 +1,16 @@
+import { lazy, Suspense } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { PlaybackProvider } from './audio/PlaybackContext'
 import { AppShell } from './components/AppShell'
 import { ProjectProvider } from './core/ProjectContext'
-import ArrangePage from './pages/ArrangePage'
-import BassPage from './pages/BassPage'
-import ChordsPage from './pages/ChordsPage'
-import ComposerPage from './pages/ComposerPage'
-import DrumsPage from './pages/DrumsPage'
-import LibraryPage from './pages/LibraryPage'
 import StartPage from './pages/StartPage'
+
+const ArrangePage = lazy(() => import('./pages/ArrangePage'))
+const BassPage = lazy(() => import('./pages/BassPage'))
+const ChordsPage = lazy(() => import('./pages/ChordsPage'))
+const ComposerPage = lazy(() => import('./pages/ComposerPage'))
+const DrumsPage = lazy(() => import('./pages/DrumsPage'))
+const LibraryPage = lazy(() => import('./pages/LibraryPage'))
 
 
 export default function App() {
@@ -16,6 +18,7 @@ export default function App() {
     <ProjectProvider>
       <PlaybackProvider>
         <HashRouter>
+          <Suspense fallback={<p className="app-loading">読み込み中…</p>}>
           <Routes>
             <Route path="/" element={<Navigate to="/layer/start" replace />} />
             <Route path="/layer" element={<AppShell />}>
@@ -32,6 +35,7 @@ export default function App() {
             <Route path="/library/:tab" element={<LibraryPage />} />
             <Route path="*" element={<Navigate to="/layer/melody" replace />} />
           </Routes>
+          </Suspense>
         </HashRouter>
       </PlaybackProvider>
     </ProjectProvider>

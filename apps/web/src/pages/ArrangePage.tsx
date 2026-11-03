@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import { playLayers } from '../audio/player'
 import { PlayStopButton } from '../components/PlayStopButton'
 import { TonePicker } from '../components/TonePicker'
-import { downloadMultiTrackMidi } from '../export/midi'
-import { downloadMixWav, filterLayersByInclude } from '../export/wav'
+import { filterLayersByInclude } from '../export/layers'
 import { collectKeyWarnings, useProject } from '../core/ProjectContext'
 import { LAYER_LABELS, type LayerKind } from '../core/projectTypes'
 import { keyOptionLabel } from '../core/scale'
@@ -120,13 +119,16 @@ export default function ArrangePage() {
             disabled={exporting || selectedCount === 0}
             onClick={() => {
               setExporting(true)
-              void downloadMixWav(
-                selectedLayers,
-                draft.mixer,
-                'song.wav',
-                draft.chords.playStyle ?? 'block',
-                draft.tones,
-              )
+              void import('../export/wav')
+                .then(({ downloadMixWav }) =>
+                  downloadMixWav(
+                    selectedLayers,
+                    draft.mixer,
+                    'song.wav',
+                    draft.chords.playStyle ?? 'block',
+                    draft.tones,
+                  ),
+                )
                 .catch((err: unknown) => {
                   console.error(err)
                   const msg = err instanceof Error ? err.message : String(err)
@@ -142,7 +144,14 @@ export default function ArrangePage() {
             className="btn"
             disabled={exporting || selectedCount === 0}
             onClick={() => {
-              downloadMultiTrackMidi(selectedLayers, 'song.mid', draft.tones)
+              void import('../export/midi')
+                .then(({ downloadMultiTrackMidi }) =>
+                  downloadMultiTrackMidi(selectedLayers, 'song.mid', draft.tones),
+                )
+                .catch((err: unknown) => {
+                  console.error(err)
+                  window.alert('MIDI の書き出しに失敗しました。')
+                })
             }}
           >
             MIDIで保存
