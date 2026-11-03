@@ -15,7 +15,7 @@
 
 ## 必要環境
 
-- Node.js 20+
+- Node.js 22 以上（推奨 24）
 - モダンブラウザ（Chrome / Edge / Firefox など）
 
 ## 起動方法
