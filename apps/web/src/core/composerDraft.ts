@@ -1,3 +1,4 @@
+import { storageGet, storageRemove, storageSet } from './safeStorage'
 import {
   createDefaultDistribution,
   createDefaultSequence,
@@ -29,7 +30,7 @@ export interface ComposerDraft {
 
 function readJsonLocal<T>(key: string): T | null {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = storageGet('local', key)
     if (!raw) return null
     return JSON.parse(raw) as T
   } catch {
@@ -45,7 +46,7 @@ export function readComposerDraft(): ComposerDraft | null {
 
   // Migrate older session-only stage draft once
   try {
-    const legacy = sessionStorage.getItem(LEGACY_STAGE_SESSION_KEY)
+    const legacy = storageGet('session', LEGACY_STAGE_SESSION_KEY)
     if (legacy) {
       const stage = JSON.parse(legacy) as Phrase[]
       if (Array.isArray(stage) && stage.length > 0) {
@@ -82,13 +83,9 @@ export function readComposerDraft(): ComposerDraft | null {
 }
 
 export function writeComposerDraft(draft: ComposerDraft): void {
-  localStorage.setItem(COMPOSER_DRAFT_KEY, JSON.stringify(draft))
+  storageSet('local', COMPOSER_DRAFT_KEY, JSON.stringify(draft))
   // Keep stage mirror for older helpers / pending append
-  try {
-    sessionStorage.removeItem(LEGACY_STAGE_SESSION_KEY)
-  } catch {
-    /* ignore */
-  }
+  storageRemove('session', LEGACY_STAGE_SESSION_KEY)
 }
 
 export function readStageFromDraft(): Phrase[] {

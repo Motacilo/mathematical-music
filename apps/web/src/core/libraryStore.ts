@@ -1,3 +1,4 @@
+import { storageGet, storageRemove, storageSet } from './safeStorage'
 import {
   patchComposerStage,
   readStageFromDraft,
@@ -27,7 +28,7 @@ function uid(prefix: string): string {
 
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = storageGet('local', key)
     if (!raw) return fallback
     return JSON.parse(raw) as T
   } catch {
@@ -35,8 +36,8 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
-function writeJson(key: string, value: unknown): void {
-  localStorage.setItem(key, JSON.stringify(value))
+function writeJson(key: string, value: unknown): boolean {
+  return storageSet('local', key, JSON.stringify(value))
 }
 
 export function listFavorites(): FavoriteEntry[] {
@@ -133,16 +134,17 @@ export function writeStageDraft(phrases: Phrase[]): void {
  * Consumed with takePendingAppend (StrictMode-safe).
  */
 export function setPendingAppend(phrases: Phrase[]): void {
-  sessionStorage.setItem(
+  storageSet(
+    'session',
     PENDING_APPEND_KEY,
     JSON.stringify(clonePhrases(phrases)),
   )
 }
 
 export function takePendingAppend(): Phrase[] | null {
-  const raw = sessionStorage.getItem(PENDING_APPEND_KEY)
+  const raw = storageGet('session', PENDING_APPEND_KEY)
   if (!raw) return null
-  sessionStorage.removeItem(PENDING_APPEND_KEY)
+  storageRemove('session', PENDING_APPEND_KEY)
   try {
     const parsed = JSON.parse(raw) as Phrase[]
     return Array.isArray(parsed) ? parsed : null

@@ -1,3 +1,4 @@
+import { storageGet, storageSet } from './safeStorage'
 import {
   createDefaultDistribution,
   createDefaultSequence,
@@ -111,7 +112,7 @@ export function createEmptyProjectDraft(
 
 function readJsonLocal<T>(key: string): T | null {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = storageGet('local', key)
     if (!raw) return null
     return JSON.parse(raw) as T
   } catch {
@@ -163,7 +164,7 @@ export function readProjectDraft(): ProjectDraft {
 }
 
 export function writeProjectDraft(draft: ProjectDraft): void {
-  localStorage.setItem(PROJECT_DRAFT_KEY, JSON.stringify(draft))
+  storageSet('local', PROJECT_DRAFT_KEY, JSON.stringify(draft))
   writeComposerDraft(draft.melody)
 }
 
