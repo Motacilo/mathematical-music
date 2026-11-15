@@ -1,4 +1,5 @@
 import { generateAutofillSong, type AutofillOptions } from '../autofill/generate'
+import { randomSongFeel, type SongFeel } from '../autofill/melody'
 import { chordRootMidiFromBar, uid } from '../chords/theory'
 import { nearestChordTone } from '../harmony/fitMelody'
 import type { MoodPreset } from '../mood/presets'
@@ -28,14 +29,13 @@ const PROFILES: Record<
 > = {
   intro: {
     minBars: 2,
-    melodyRhythms: ['quarters', 'quarters', 'eighths'],
+    melodyDensity: -1,
     restChoices: [25, 35, 40],
     bassRhythms: ['quarters'],
     drumStyles: ['ballad', 'half_time'],
     arrangeDrums: false,
     drumDensity: 12,
     centerShift: 0,
-    centerJitter: [-1, 0, 0, 1],
     chordStart: 1,
     chordEnd: 1,
     holdPairs: true,
@@ -43,52 +43,51 @@ const PROFILES: Record<
   },
   a: {
     minBars: 2,
-    melodyRhythms: ['eighths', 'quarters', 'eighths'],
+    melodyDensity: -0.1,
+    repeatPhrases: true,
     restChoices: [8, 10, 15],
     bassRhythms: ['quarters', 'eighths'],
     drumStyles: ['eight_beat', 'eight_beat', 'rock'],
     arrangeDrums: false,
     drumDensity: 20,
-    centerJitter: [-1, 0, 0, 1],
     chordStart: 1,
   },
   b: {
     minBars: 2,
-    melodyRhythms: ['eighths', 'eighths', 'mixed_8_4'],
+    melodyDensity: 0.3,
+    repeatPhrases: true,
     restChoices: [0, 5, 8],
     bassRhythms: ['eighths'],
     drumStyles: ['eight_beat', 'sixteen_beat'],
     arrangeDrums: true,
     drumDensity: 42,
     centerShift: 2,
-    centerJitter: [0, 1, 1, 2],
     chordStart: 4,
     chordEnd: 5,
     skipCadence: true,
   },
   chorus: {
     minBars: 2,
-    melodyRhythms: ['eighths', 'eighths'],
+    melodyDensity: 0.7,
+    repeatPhrases: true,
     restChoices: [0, 0, 5],
     bassRhythms: ['eighths', 'quarters'],
     drumStyles: ['four_on_floor', 'eight_beat', 'eight_beat'],
     arrangeDrums: true,
     drumDensity: 36,
     centerShift: 5,
-    centerJitter: [-1, 0, 1, 2],
     chordStart: 1,
     chordEnd: 1,
   },
   c: {
     minBars: 2,
-    melodyRhythms: ['quarters', 'eighths'],
+    melodyDensity: -0.5,
     restChoices: [15, 20, 25],
     bassRhythms: ['quarters'],
     drumStyles: ['half_time', 'ballad'],
     arrangeDrums: false,
     drumDensity: 16,
     centerShift: -2,
-    centerJitter: [-2, -1, 0, 1],
     chordStart: 6,
     chordEnd: 5,
     skipCadence: true,
@@ -116,6 +115,8 @@ function resolveProfile(role: SectionRole): { options: AutofillOptions; quiet: b
         ...base,
         minBars: 2,
         restChoices: fromChorus ? [8, 12, 18] : [15, 22, 30],
+        melodyDensity: fromChorus ? 0.2 : -0.8,
+        repeatPhrases: false,
         drumDensity: fromChorus ? 26 : 16,
         centerShift: fromChorus ? 3 : 1,
         chordEnd: fromChorus ? 5 : 1,
@@ -130,6 +131,8 @@ function resolveProfile(role: SectionRole): { options: AutofillOptions; quiet: b
       ...base,
       minBars: 2,
       restChoices: fromChorus ? [12, 20, 30] : [28, 36, 45],
+      melodyDensity: -1,
+      repeatPhrases: false,
       drumDensity: fromChorus ? 16 : 8,
       centerShift: fromChorus ? 1 : 0,
       chordStart: 1,
@@ -199,6 +202,16 @@ function sustainOutro(block: {
   silenceFinalDrumBar(block.drums)
 }
 
+/** Bass groove: the role's own rhythm or the mood's, half and half. */
+function bassFor(profile: AutofillOptions, mood: MoodPreset | null): AutofillOptions['bassRhythms'] {
+  if (!mood || Math.random() < 0.5) return profile.bassRhythms
+  return mood.bassRhythms
+}
+
+/**
+ * Candidates for one section. Each candidate gets its own song feel unless
+ * one is passed in (a full song shares one feel so its sections belong together).
+ */
 export function generateSectionCandidates(
   role: SectionRole,
   bars: number,
@@ -207,12 +220,16 @@ export function generateSectionCandidates(
   bpm: number,
   count = SECTION_CANDIDATE_COUNT,
   mood: MoodPreset | null = null,
+  feel?: SongFeel,
 ): SectionCandidate[] {
   return Array.from({ length: count }, (_, i) => {
     const { options, quiet } = resolveProfile(role)
     const styles = drumsFor(options, mood)
     const result = generateAutofillSong(bars, keyRoot, scale, bpm, {
       ...options,
+      melodyDensity: (options.melodyDensity ?? 0) + (mood?.density ?? 0),
+      bassRhythms: bassFor(options, mood),
+      feel: feel ?? randomSongFeel(),
       drumStyles: [pick(styles)],
       arrangeDrums: quiet ? false : i % 2 === 1,
     })
@@ -236,6 +253,7 @@ export function generateFullSong(
   bpm: number,
   mood: MoodPreset | null = null,
 ): SectionCandidate[] {
+  const feel = randomSongFeel()
   return FULL_SONG_ROLES.map((role) => {
     const made = generateSectionCandidates(
       role,
@@ -245,6 +263,7 @@ export function generateFullSong(
       bpm,
       1,
       mood,
+      feel,
     )
     return made[0]!
   })

@@ -13,7 +13,8 @@ export interface MoodPreset {
   keys: number[]
   bpm: readonly [number, number]
   drumStyles: readonly DrumStyleId[]
-  melodyRhythms: readonly RhythmId[]
+  /** Melody rhythm lean: -1 sparse … +1 busy */
+  density: number
   restChoices: readonly number[]
   bassRhythms: readonly RhythmId[]
   playStyle: ChordPlayStyleId
@@ -28,7 +29,7 @@ export const MOODS: readonly MoodPreset[] = [
     keys: [0, 7, 2, 5],
     bpm: [130, 149],
     drumStyles: ['eight_beat', 'four_on_floor'],
-    melodyRhythms: ['eighths', 'eighths', 'mixed_8_4'],
+    density: 0.4,
     restChoices: [0, 0, 5],
     bassRhythms: ['eighths', 'quarters'],
     playStyle: 'pulse',
@@ -41,7 +42,7 @@ export const MOODS: readonly MoodPreset[] = [
     keys: [9, 4, 2, 11],
     bpm: [86, 108],
     drumStyles: ['ballad', 'half_time'],
-    melodyRhythms: ['quarters', 'eighths'],
+    density: -0.6,
     restChoices: [10, 15, 20],
     bassRhythms: ['quarters', 'quarters'],
     playStyle: 'broken',
@@ -54,7 +55,7 @@ export const MOODS: readonly MoodPreset[] = [
     keys: [4, 9, 2, 7],
     bpm: [158, 182],
     drumStyles: ['sixteen_beat', 'four_on_floor'],
-    melodyRhythms: ['eighths', 'eighths'],
+    density: 0.9,
     restChoices: [0, 0, 5],
     bassRhythms: ['eighths', 'eighths'],
     playStyle: 'pulse',
@@ -67,7 +68,7 @@ export const MOODS: readonly MoodPreset[] = [
     keys: [0, 5, 7, 9],
     bpm: [91, 115],
     drumStyles: ['ballad', 'eight_beat'],
-    melodyRhythms: ['quarters', 'quarters', 'mixed_8_4'],
+    density: -0.7,
     restChoices: [8, 12, 15],
     bassRhythms: ['quarters'],
     playStyle: 'alberti',
@@ -80,7 +81,7 @@ export const MOODS: readonly MoodPreset[] = [
     keys: [2, 9, 4, 7],
     bpm: [115, 137],
     drumStyles: ['rock', 'half_time'],
-    melodyRhythms: ['eighths', 'quarters'],
+    density: 0.2,
     restChoices: [5, 10],
     bassRhythms: ['eighths', 'quarters'],
     playStyle: 'block',

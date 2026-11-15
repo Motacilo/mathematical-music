@@ -8,8 +8,8 @@
  *
  * - chord tones are always kept
  * - notes outside the key are moved to a chord tone
- * - on strong beats (1 and 3) and on notes a quarter or longer, non-chord
- *   tones are moved to a chord tone
+ * - exposed notes (the downbeat, a quarter or longer on beat 3, anything a
+ *   dotted quarter or longer) that are not chord tones move to a chord tone
  * - short notes on weak beats may stay as passing / neighbour tones; one that
  *   sits a semitone from a chord tone (a minor-2nd / minor-9th rub) moves to
  *   the nearest in-key note that does not rub
@@ -34,13 +34,20 @@ export function chordPitchClasses(chord: ChordBar): number[] {
   return [...new Set(chordPitches(chord).map(pitchClass))]
 }
 
-function isStrongBeat(beat: number): boolean {
-  const rounded = Math.round(beat)
-  return Math.abs(beat - rounded) < EPS && rounded % 2 === 0
+/**
+ * Notes the ear hangs on: the downbeat, a quarter or longer on beat 3, and
+ * anything a dotted quarter or longer. These must be chord tones; others may
+ * pass through the key.
+ */
+export function isExposedNote(onset: number, length: number): boolean {
+  const onBeat = (b: number) => Math.abs(onset - b) < EPS
+  if (onBeat(0)) return true
+  if (onBeat(2) && length >= 1 - EPS) return true
+  return length >= 1.5 - EPS
 }
 
 /** True when the note is a semitone above or below some chord tone. */
-function rubsAgainst(pc: number, chordPcs: number[]): boolean {
+export function rubsAgainst(pc: number, chordPcs: number[]): boolean {
   return chordPcs.some((c) => {
     const d = (pc - c + 12) % 12
     return d === 1 || d === 11
@@ -116,7 +123,7 @@ export function fitMelodyToChords(
       const isChordTone = (p: number) => pcs.includes(p)
       let pitch = note.pitch
       if (!isChordTone(pc)) {
-        const exposed = isStrongBeat(onset) || length >= 1 - EPS
+        const exposed = isExposedNote(onset, length)
         if (exposed || !inKey(note.pitch)) {
           // Strong / long / out-of-key: land on a chord tone.
           pitch = closestAllowed(note.pitch, isChordTone, previous, wasRepeat)

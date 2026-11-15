@@ -58,7 +58,10 @@ const LEAD: Record<ToneId, VoiceDef> = {
 const BASS: Record<ToneId, VoiceDef> = {
   piano: {
     engine: 'synth',
-    volumeDb: 5,
+    // Triangle carries audible upper harmonics, so it reads far louder than the
+    // sine bass at the same setting. Measured ~19 LU above the melody at +5 dB;
+    // -9 dB leaves it a few LU above the melody.
+    volumeDb: -9,
     options: {
       oscillator: { type: 'triangle' },
       envelope: { attack: 0.008, decay: 0.16, sustain: 0.55, release: 0.12 },
