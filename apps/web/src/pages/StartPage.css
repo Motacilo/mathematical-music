@@ -87,30 +87,6 @@
   color: var(--muted);
 }
 
-.build-mode {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.build-mode__tab {
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 700;
-  padding: 10px 16px;
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background: #fff;
-  color: var(--layer-ink, #6b3a16);
-  cursor: pointer;
-}
-
-.build-mode__tab.is-selected {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
 .start-actions {
   display: flex;
   flex-wrap: wrap;

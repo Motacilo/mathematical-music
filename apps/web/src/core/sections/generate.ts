@@ -1,5 +1,6 @@
 import { generateAutofillSong, type AutofillOptions } from '../autofill/generate'
 import { chordRootMidiFromBar, uid } from '../chords/theory'
+import { nearestChordTone } from '../harmony/fitMelody'
 import type { MoodPreset } from '../mood/presets'
 import type { ChordBar, DrumPhrase } from '../projectTypes'
 import type { DrumStyleId } from '../drums/generate'
@@ -159,10 +160,17 @@ function lastPlayedPitch(phrases: Phrase[]): number | undefined {
 }
 
 /** Last bar becomes one held pitch, so the outro rings instead of stopping short. */
-function holdFinalBar(phrases: Phrase[], fallbackPitch: number): void {
+function holdFinalBar(
+  phrases: Phrase[],
+  fallbackPitch: number,
+  chord?: ChordBar,
+): void {
   const last = phrases[phrases.length - 1]
   if (!last) return
-  last.notes = [{ pitch: lastPlayedPitch(phrases) ?? fallbackPitch, duration: '1n' }]
+  const held = lastPlayedPitch(phrases) ?? fallbackPitch
+  // The held note may come from an earlier bar; keep it inside the final chord.
+  const pitch = chord ? nearestChordTone(held, chord) : held
+  last.notes = [{ pitch, duration: '1n' }]
 }
 
 function silenceFinalDrumBar(phrases: DrumPhrase[]): void {
@@ -184,8 +192,8 @@ function sustainOutro(block: {
 }): void {
   const key = block.melody.at(-1)?.keyRoot ?? block.chords.at(-1)?.keyRoot ?? 0
   const tonic = ((key % 12) + 12) % 12
-  holdFinalBar(block.melody, 60 + tonic)
   const lastChord = block.chords.at(-1)
+  holdFinalBar(block.melody, 60 + tonic, lastChord)
   if (lastChord) lastChord.sustain = true
   holdFinalBar(block.bass, lastChord ? chordRootMidiFromBar(lastChord, 3) : 48 + tonic)
   silenceFinalDrumBar(block.drums)

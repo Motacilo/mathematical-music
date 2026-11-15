@@ -7,6 +7,7 @@ import {
   type DrumStyleId,
 } from '../drums/generate'
 import { generateDistributionPhrase } from '../generators/distribution'
+import { fitMelodyToChords } from '../harmony/fitMelody'
 import { splitPhraseIntoBars } from '../phraseSplit'
 import {
   createDefaultQualityEnable,
@@ -345,7 +346,14 @@ export function generateAutofillSong(
 ): AutofillResult {
   const bars = clampBars(barCount, options?.minBars ?? 4)
   const chords = generateAutofillChords(bars, keyRoot, scale, bpm, options)
-  const melody = generateAutofillMelody(bars, keyRoot, scale, bpm, options)
+  // Melody is drawn from the key, then bent onto each bar's chord so the
+  // automatic result does not clash with the harmony underneath.
+  const melody = fitMelodyToChords(
+    generateAutofillMelody(bars, keyRoot, scale, bpm, options),
+    chords,
+    keyRoot,
+    scale,
+  )
   const bass = generateAutofillBass(chords, bars, options)
   const { phrases: drums, styleId } = generateAutofillDrums(bars, bpm, options)
 

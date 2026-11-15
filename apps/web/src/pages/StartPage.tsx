@@ -55,7 +55,6 @@ export default function StartPage() {
   const [busy, setBusy] = useState(false)
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
-  const [buildMode, setBuildMode] = useState<'phrase' | 'full'>('phrase')
   const followRef = useRef<number | null>(null)
 
   const stopFollow = () => {
@@ -205,12 +204,6 @@ export default function StartPage() {
     }, 30)
   }
 
-  const chooseBuildMode = (next: 'phrase' | 'full') => {
-    if (next === buildMode) return
-    void stop()
-    setBuildMode(next)
-  }
-
   const makeFullSong = () => {
     if (!mood) return
     if (!songEmpty) {
@@ -317,7 +310,7 @@ export default function StartPage() {
       <header className="app__header">
         <h1>曲をつくる</h1>
         <p className="app__lead">
-          雰囲気を選んで、区間を足すか、イントロから後奏まで通しで作ります。
+          雰囲気を選んで、区間を足すか、おまかせでイントロから後奏まで一度に作ります。
           <br />
           聴いて気に入ったものを残し、あとから音だけ差し替えられます。
         </p>
@@ -328,7 +321,7 @@ export default function StartPage() {
           </li>
           <li>
             <span className="app__step-num">2</span>
-            区間を足すか、通しで1曲作る
+            区間を足すか、おまかせで1曲作る
           </li>
           <li>
             <span className="app__step-num">3</span>
@@ -374,54 +367,6 @@ export default function StartPage() {
         <TonePicker tones={draft.tones} onChange={setTones} />
       </section>
 
-      <div className="build-mode" role="tablist" aria-label="作り方">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={buildMode === 'phrase'}
-          className={`build-mode__tab${buildMode === 'phrase' ? ' is-selected' : ''}`}
-          onClick={() => chooseBuildMode('phrase')}
-        >
-          フレーズごと
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={buildMode === 'full'}
-          className={`build-mode__tab${buildMode === 'full' ? ' is-selected' : ''}`}
-          onClick={() => chooseBuildMode('full')}
-        >
-          全おまかせ
-        </button>
-      </div>
-
-      {buildMode === 'full' ? (
-        <section className="app__section">
-          <h2>通しで1曲</h2>
-          <div className="start-actions">
-            <button
-              type="button"
-              className="btn primary"
-              disabled={busy || !mood}
-              onClick={makeFullSong}
-            >
-              {busy ? '生成しています…' : '生成する'}
-            </button>
-            <PlayStopButton
-              label="通しで聴く"
-              className="btn btn--score"
-              disabled={totalBars === 0}
-              onPlay={() => void playAll()}
-            />
-          </div>
-          <p className="layer-hint">
-            {mood
-              ? 'イントロ、Aメロ、Bメロ、サビ、間奏、Aメロ、Bメロ、サビ、Cメロ、サビ、後奏の順で作ります。いまの曲があるときは置き換わります。'
-              : '先に雰囲気を選んでください。キーや速さ、音色に合わせて1曲作ります。'}
-          </p>
-        </section>
-      ) : (
-      <>
       <section className="app__section">
         <div className="app__section-head">
           <h2>いまの曲</h2>
@@ -440,11 +385,20 @@ export default function StartPage() {
             >
               曲を空にする
             </button>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={busy || !mood}
+              title="イントロ、Aメロ、Bメロ、サビ、間奏、Aメロ、Bメロ、サビ、Cメロ、サビ、後奏の順で1曲作ります"
+              onClick={makeFullSong}
+            >
+              {busy ? '生成しています…' : 'おまかせで1曲作る'}
+            </button>
           </div>
         </div>
         {draft.sections.length === 0 ? (
           <p className="layer-hint">
-            まだ区間がありません。最初はイントロがおすすめです。
+            まだ区間がありません。最初はイントロがおすすめです。右上の「おまかせで1曲作る」で、イントロから後奏まで一度に作ることもできます。
             {totalBars > 0
               ? ` 先に入っている譜面が ${totalBars} 小節あります。新しい区間はそのうしろに足します。`
               : ''}
@@ -617,8 +571,6 @@ export default function StartPage() {
             })}
           </div>
         </section>
-      )}
-      </>
       )}
 
       <AppFooter />
