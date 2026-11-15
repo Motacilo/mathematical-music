@@ -1,4 +1,4 @@
-import type { ChordPlayStyleId } from '../projectTypes'
+import type { ConcreteChordPlayStyle } from '../projectTypes'
 import type { DrumStyleId } from '../drums/generate'
 import type { RhythmId, ScaleType } from '../types'
 
@@ -17,7 +17,8 @@ export interface MoodPreset {
   density: number
   restChoices: readonly number[]
   bassRhythms: readonly RhythmId[]
-  playStyle: ChordPlayStyleId
+  /** Ways the chords may be played; おまかせ picks one per section. */
+  chordStyles: readonly ConcreteChordPlayStyle[]
 }
 
 export const MOODS: readonly MoodPreset[] = [
@@ -32,7 +33,7 @@ export const MOODS: readonly MoodPreset[] = [
     density: 0.4,
     restChoices: [0, 0, 5],
     bassRhythms: ['eighths', 'quarters'],
-    playStyle: 'pulse',
+    chordStyles: ['pulse', 'arp_pop', 'arp_up', 'block'],
   },
   {
     id: 'wistful',
@@ -45,7 +46,7 @@ export const MOODS: readonly MoodPreset[] = [
     density: -0.6,
     restChoices: [10, 15, 20],
     bassRhythms: ['quarters', 'quarters'],
-    playStyle: 'broken',
+    chordStyles: ['arp_ring', 'arp_pop', 'broken', 'arp_wave'],
   },
   {
     id: 'drive',
@@ -58,7 +59,7 @@ export const MOODS: readonly MoodPreset[] = [
     density: 0.9,
     restChoices: [0, 0, 5],
     bassRhythms: ['eighths', 'eighths'],
-    playStyle: 'pulse',
+    chordStyles: ['pulse', 'arp_16', 'pulse', 'block'],
   },
   {
     id: 'calm',
@@ -71,7 +72,7 @@ export const MOODS: readonly MoodPreset[] = [
     density: -0.7,
     restChoices: [8, 12, 15],
     bassRhythms: ['quarters'],
-    playStyle: 'alberti',
+    chordStyles: ['arp_ring', 'alberti', 'arp_pop', 'block'],
   },
   {
     id: 'cool',
@@ -84,7 +85,7 @@ export const MOODS: readonly MoodPreset[] = [
     density: 0.2,
     restChoices: [5, 10],
     bassRhythms: ['eighths', 'quarters'],
-    playStyle: 'block',
+    chordStyles: ['block', 'pulse', 'arp_16', 'broken'],
   },
 ]
 

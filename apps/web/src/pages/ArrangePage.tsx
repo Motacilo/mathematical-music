@@ -146,7 +146,12 @@ export default function ArrangePage() {
             onClick={() => {
               void import('../export/midi')
                 .then(({ downloadMultiTrackMidi }) =>
-                  downloadMultiTrackMidi(selectedLayers, 'song.mid', draft.tones),
+                  downloadMultiTrackMidi(
+                    selectedLayers,
+                    'song.mid',
+                    draft.tones,
+                    draft.chords.playStyle ?? 'block',
+                  ),
                 )
                 .catch((err: unknown) => {
                   console.error(err)

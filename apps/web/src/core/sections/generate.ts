@@ -2,6 +2,8 @@ import { generateAutofillSong, type AutofillOptions } from '../autofill/generate
 import { randomSongFeel, type SongFeel } from '../autofill/melody'
 import { chordRootMidiFromBar, uid } from '../chords/theory'
 import { nearestChordTone } from '../harmony/fitMelody'
+import { ARPEGGIO_STYLES, CONCRETE_STYLES } from '../chords/playStyle'
+import type { ConcreteChordPlayStyle } from '../projectTypes'
 import type { MoodPreset } from '../mood/presets'
 import type { ChordBar, DrumPhrase } from '../projectTypes'
 import type { DrumStyleId } from '../drums/generate'
@@ -202,6 +204,23 @@ function sustainOutro(block: {
   silenceFinalDrumBar(block.drums)
 }
 
+/**
+ * How this section plays its chords. Quiet sections (intro, C, outro, a quiet
+ * interlude) lean toward the mood's arpeggios; the rest pick from the mood.
+ */
+function chordStyleFor(
+  role: SectionRole,
+  quiet: boolean,
+  mood: MoodPreset | null,
+): ConcreteChordPlayStyle {
+  const pool = mood?.chordStyles.length ? mood.chordStyles : CONCRETE_STYLES
+  const arps = pool.filter((s) => ARPEGGIO_STYLES.includes(s))
+  if ((quiet || role === 'outro') && arps.length > 0 && Math.random() < 0.65) {
+    return pick(arps)
+  }
+  return pick(pool)
+}
+
 /** Bass groove: the role's own rhythm or the mood's, half and half. */
 function bassFor(profile: AutofillOptions, mood: MoodPreset | null): AutofillOptions['bassRhythms'] {
   if (!mood || Math.random() < 0.5) return profile.bassRhythms
@@ -221,6 +240,8 @@ export function generateSectionCandidates(
   count = SECTION_CANDIDATE_COUNT,
   mood: MoodPreset | null = null,
   feel?: SongFeel,
+  /** Reuse one chord style per role (a full song keeps A, B, chorus consistent). */
+  chordStyles?: Map<SectionRole, ConcreteChordPlayStyle>,
 ): SectionCandidate[] {
   return Array.from({ length: count }, (_, i) => {
     const { options, quiet } = resolveProfile(role)
@@ -233,6 +254,9 @@ export function generateSectionCandidates(
       drumStyles: [pick(styles)],
       arrangeDrums: quiet ? false : i % 2 === 1,
     })
+    const chordStyle = chordStyles?.get(role) ?? chordStyleFor(role, quiet, mood)
+    chordStyles?.set(role, chordStyle)
+    for (const bar of result.chords) bar.playStyle = chordStyle
     if (role === 'outro') sustainOutro(result)
     return {
       id: uid('cand'),
@@ -254,6 +278,7 @@ export function generateFullSong(
   mood: MoodPreset | null = null,
 ): SectionCandidate[] {
   const feel = randomSongFeel()
+  const chordStyles = new Map<SectionRole, ConcreteChordPlayStyle>()
   return FULL_SONG_ROLES.map((role) => {
     const made = generateSectionCandidates(
       role,
@@ -264,6 +289,7 @@ export function generateFullSong(
       1,
       mood,
       feel,
+      chordStyles,
     )
     return made[0]!
   })

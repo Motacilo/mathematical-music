@@ -343,7 +343,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           ...cleared.chords,
           keyRoot: meta.keyRoot,
           scale: meta.scale,
-          playStyle: mood.playStyle,
+          // Each section picks its own way of playing the chords.
+          playStyle: 'auto',
           candidates: [],
           stage: [],
           qualityEnable: createDefaultQualityEnable(),

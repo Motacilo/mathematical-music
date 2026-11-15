@@ -1,8 +1,8 @@
 import { Midi } from '@tonejs/midi'
 import { DURATION_BEATS } from '../core/rhythm'
-import { chordPitches } from '../core/chords/theory'
+import { expandChordBarPlay, styleForBar } from '../core/chords/playStyle'
 import { drumInstrumentMidi } from '../core/drums/generate'
-import type { ChordBar, DrumPhrase } from '../core/projectTypes'
+import type { ChordBar, ChordPlayStyleId, DrumPhrase } from '../core/projectTypes'
 import type { Phrase } from '../core/types'
 import {
   createDefaultTones,
@@ -54,7 +54,13 @@ function addPhraseTrack(
   }
 }
 
-function addChordTrack(midi: Midi, chords: ChordBar[], program: number): void {
+/** Chords are written the way they are played (arpeggio, pulse, ...), so Cubase gets the same part. */
+function addChordTrack(
+  midi: Midi,
+  chords: ChordBar[],
+  program: number,
+  playStyle: ChordPlayStyleId,
+): void {
   if (!chords.length) return
   const track = midi.addTrack()
   track.name = 'Chords'
@@ -63,17 +69,17 @@ function addChordTrack(midi: Midi, chords: ChordBar[], program: number): void {
   const ppq = midi.header.ppq
   let tick = 0
   for (const bar of chords) {
-    const durationTicks = ppq * 4
-    const pitches = chordPitches(bar)
-    for (const p of pitches) {
-      track.addNote({
-        midi: p,
-        ticks: tick,
-        durationTicks,
-        velocity: 0.7,
-      })
+    for (const ev of expandChordBarPlay(bar, styleForBar(bar, playStyle))) {
+      for (const p of ev.pitches) {
+        track.addNote({
+          midi: p,
+          ticks: tick + Math.round(ev.timeBeat * ppq),
+          durationTicks: Math.max(1, Math.round(ev.durationBeats * ppq)),
+          velocity: 0.7,
+        })
+      }
     }
-    tick += durationTicks
+    tick += ppq * 4
   }
 }
 
@@ -102,6 +108,7 @@ function addDrumTrack(midi: Midi, phrases: DrumPhrase[]): void {
 export function buildMultiTrackMidiBlob(
   layers: MidiLayers,
   tones: ToneMap = createDefaultTones(),
+  chordPlayStyle: ChordPlayStyleId = 'block',
 ): Blob {
   const midi = new Midi()
   const bpm =
@@ -121,7 +128,7 @@ export function buildMultiTrackMidiBlob(
     addPhraseTrack(midi, 'Melody', 0, layers.melody, gmProgram('melody', tones.melody))
   }
   if (layers.chords?.length) {
-    addChordTrack(midi, layers.chords, gmProgram('chords', tones.chords))
+    addChordTrack(midi, layers.chords, gmProgram('chords', tones.chords), chordPlayStyle)
   }
   if (layers.bass?.length) {
     addPhraseTrack(midi, 'Bass', 2, layers.bass, gmProgram('bass', tones.bass))
@@ -152,8 +159,9 @@ export function downloadMultiTrackMidi(
   layers: MidiLayers,
   filename = 'arrangement.mid',
   tones: ToneMap = createDefaultTones(),
+  chordPlayStyle: ChordPlayStyleId = 'block',
 ): void {
-  triggerDownload(buildMultiTrackMidiBlob(layers, tones), filename)
+  triggerDownload(buildMultiTrackMidiBlob(layers, tones, chordPlayStyle), filename)
 }
 
 function triggerDownload(blob: Blob, filename: string): void {

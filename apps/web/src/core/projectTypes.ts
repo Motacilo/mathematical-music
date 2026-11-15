@@ -41,6 +41,8 @@ export interface ChordBar {
   scale: ScaleType
   /** Play this bar as one held chord, ignoring the song's strum pattern. */
   sustain?: boolean
+  /** This bar's own play style, used when the layer's style is 'auto'. */
+  playStyle?: ConcreteChordPlayStyle
 }
 
 export type DrumInstrument = 'kick' | 'snare' | 'hat'
@@ -95,7 +97,15 @@ export type ChordPlayStyleId =
   | 'arp_wave'
   | 'broken'
   | 'alberti'
+  | 'arp_ring'
+  | 'arp_pop'
+  | 'arp_16'
   | 'random'
+  /** Each bar plays its own style (set by the automatic generators). */
+  | 'auto'
+
+/** A style that a single bar can actually be played in. */
+export type ConcreteChordPlayStyle = Exclude<ChordPlayStyleId, 'random' | 'auto'>
 
 export interface ChordsLayerState {
   mode: ChordGenMode

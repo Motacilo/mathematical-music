@@ -336,6 +336,7 @@ export default function ChordsPage() {
           <label>
             鳴らし方
             <select
+              title="おまかせ（区間ごと）: はじめるタブで作った区間はそれぞれの弾き方、それ以外の小節は同時押しで鳴らします"
               value={chords.playStyle ?? 'block'}
               onChange={(e) =>
                 setChords({

@@ -2,7 +2,7 @@ import * as Tone from 'tone'
 import { DURATION_BEATS } from '../core/rhythm'
 import {
   expandChordBarPlay,
-  resolveChordPlayStyle,
+  styleForBar,
 } from '../core/chords/playStyle'
 import type {
   ChordBar,
@@ -171,21 +171,36 @@ function scheduleChords(
 ): void {
   if (volume <= 0 || chords.length === 0) return
   const gain = new Tone.Gain(volume).connect(out())
-  // Separate synths to avoid PolySynth Offline quirks
-  const voices = createChordVoices(tone, 4).map((synth) => synth.connect(gain))
+  // Separate synths to avoid PolySynth Offline quirks. Each note takes the
+  // lowest voice that has finished ringing, so short notes keep reusing one
+  // voice (cheap to render) and only overlapping notes open more voices.
+  // A voice counts as free once its gate ends; retriggering it during the
+  // release tail is inaudible and keeps the render fast.
+  const voices = createChordVoices(tone, 5).map((synth) => synth.connect(gain))
+  const freeAt = voices.map(() => 0)
+  const takeVoice = (at: number): number => {
+    let best = 0
+    for (let v = 0; v < voices.length; v++) {
+      if (freeAt[v]! <= at) return v
+      if (freeAt[v]! < freeAt[best]!) best = v
+    }
+    return best
+  }
   let t = 0
   for (const bar of chords) {
     const beatSec = 60 / Math.max(1, bar.bpm)
     const durSec = 4 * beatSec
-    const style = resolveChordPlayStyle(playStyle)
+    const style = styleForBar(bar, playStyle)
     const events = expandChordBarPlay(bar, style)
     for (const ev of events) {
       const gate = Math.max(0.05, ev.durationBeats * beatSec * 0.95)
       const at = t + ev.timeBeat * beatSec
-      ev.pitches.forEach((p, i) => {
+      for (const p of ev.pitches) {
         const freq = Tone.Frequency(p, 'midi').toFrequency()
-        voices[i % voices.length]!.triggerAttackRelease(freq, gate, at)
-      })
+        const v = takeVoice(at)
+        voices[v]!.triggerAttackRelease(freq, gate, at)
+        freeAt[v] = at + gate
+      }
     }
     t += durSec
   }

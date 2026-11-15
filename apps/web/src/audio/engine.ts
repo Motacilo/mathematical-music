@@ -5,7 +5,7 @@ import * as Tone from 'tone'
 import { DURATION_BEATS } from '../core/rhythm'
 import {
   expandChordBarPlay,
-  resolveChordPlayStyle,
+  styleForBar,
 } from '../core/chords/playStyle'
 import { drumInstrumentMidi } from '../core/drums/generate'
 import type {
@@ -252,7 +252,7 @@ function collectChords(
   for (const bar of chords) {
     const beatSec = 60 / Math.max(1, bar.bpm)
     const durSec = 4 * beatSec
-    const style = resolveChordPlayStyle(playStyle)
+    const style = styleForBar(bar, playStyle)
     for (const ev of expandChordBarPlay(bar, style)) {
       cues.push({
         at: t + ev.timeBeat * beatSec,
