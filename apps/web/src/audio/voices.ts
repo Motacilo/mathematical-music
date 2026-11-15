@@ -6,14 +6,29 @@ type Engine = 'synth' | 'fm'
 interface VoiceDef {
   engine: Engine
   options: Record<string, unknown>
-  /** Output trim. Bass sine needs a boost to stay audible. */
+  /** Output trim. */
   volumeDb: number
 }
 
-const LEAD: Record<ToneId, VoiceDef> = {
+/**
+ * Melody and chords share the lead timbres but sit at different levels.
+ * Levels are set by measurement (K-weighted loudness, default mixer) so every
+ * tone lands at about the same place in the mix: melody ~4 LU above the
+ * drums, chords and bass a little under the drums. Plucky FM tones are capped
+ * so their attack peak stays under full scale, which leaves guitar chords a
+ * little quieter on average.
+ */
+const LEAD_LEVEL_DB: Record<ToneId, { melody: number; chords: number }> = {
+  piano: { melody: 8, chords: 8 },
+  soft: { melody: -10, chords: -13.5 },
+  guitar: { melody: 10.5, chords: 5.5 },
+}
+
+export type LeadPart = 'melody' | 'chords'
+
+const LEAD: Record<ToneId, Omit<VoiceDef, 'volumeDb'>> = {
   piano: {
     engine: 'fm',
-    volumeDb: -3,
     options: {
       harmonicity: 2,
       modulationIndex: 1.15,
@@ -30,7 +45,6 @@ const LEAD: Record<ToneId, VoiceDef> = {
   },
   soft: {
     engine: 'synth',
-    volumeDb: -2,
     options: {
       oscillator: { type: 'sine' },
       envelope: { attack: 0.09, decay: 0.22, sustain: 0.72, release: 0.65 },
@@ -38,7 +52,6 @@ const LEAD: Record<ToneId, VoiceDef> = {
   },
   guitar: {
     engine: 'fm',
-    volumeDb: -6,
     options: {
       harmonicity: 3,
       modulationIndex: 2.1,
@@ -58,9 +71,7 @@ const LEAD: Record<ToneId, VoiceDef> = {
 const BASS: Record<ToneId, VoiceDef> = {
   piano: {
     engine: 'synth',
-    // Triangle carries audible upper harmonics, so it reads far louder than the
-    // sine bass at the same setting. Measured ~19 LU above the melody at +5 dB;
-    // -9 dB leaves it a few LU above the melody.
+    // Triangle carries audible upper harmonics; -9 dB puts it just under the drums.
     volumeDb: -9,
     options: {
       oscillator: { type: 'triangle' },
@@ -69,7 +80,8 @@ const BASS: Record<ToneId, VoiceDef> = {
   },
   soft: {
     engine: 'synth',
-    volumeDb: 8,
+    // A full-level sine bass was ~20 LU above everything else (and clipping).
+    volumeDb: -14,
     options: {
       oscillator: { type: 'sine' },
       envelope: { attack: 0.03, decay: 0.08, sustain: 0.9, release: 0.2 },
@@ -77,7 +89,7 @@ const BASS: Record<ToneId, VoiceDef> = {
   },
   guitar: {
     engine: 'fm',
-    volumeDb: 1,
+    volumeDb: 6.5,
     options: {
       harmonicity: 1.5,
       modulationIndex: 2.4,
@@ -105,16 +117,21 @@ function makeVoice(def: VoiceDef): LeadSynth {
   return synth
 }
 
-export function createLead(id: ToneId): LeadSynth {
-  return makeVoice(LEAD[id])
+function leadDef(id: ToneId, part: LeadPart): VoiceDef {
+  return { ...LEAD[id], volumeDb: LEAD_LEVEL_DB[id][part] }
+}
+
+/** Single melody voice (WAV export). */
+export function createLead(id: ToneId, part: LeadPart = 'melody'): LeadSynth {
+  return makeVoice(leadDef(id, part))
 }
 
 export function createBass(id: ToneId): LeadSynth {
   return makeVoice(BASS[id])
 }
 
-export function createPoly(id: ToneId): Tone.PolySynth {
-  const def = LEAD[id]
+export function createPoly(id: ToneId, part: LeadPart): Tone.PolySynth {
+  const def = leadDef(id, part)
   const poly =
     def.engine === 'fm'
       ? new Tone.PolySynth({
@@ -132,5 +149,17 @@ export function createPoly(id: ToneId): Tone.PolySynth {
 }
 
 export function createChordVoices(id: ToneId, count: number): LeadSynth[] {
-  return Array.from({ length: count }, () => createLead(id))
+  return Array.from({ length: count }, () => createLead(id, 'chords'))
+}
+
+/** Overall trim after the parts are balanced, so the full mix stays near its old loudness. */
+export const MASTER_TRIM_DB = -5
+
+/**
+ * Master bus for one audio context: trim, then a limiter to catch the moments
+ * when several attacks line up. Connect every part to the returned node.
+ */
+export function createMasterBus(): Tone.Gain {
+  const limiter = new Tone.Limiter(-1).toDestination()
+  return new Tone.Gain(Tone.dbToGain(MASTER_TRIM_DB)).connect(limiter)
 }

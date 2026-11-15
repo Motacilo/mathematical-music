@@ -21,7 +21,7 @@ import {
   type ToneId,
   type ToneMap,
 } from '../core/tones/presets'
-import { createBass, createPoly, type LeadSynth } from './voices'
+import { createBass, createMasterBus, createPoly, type LeadSynth } from './voices'
 import { PLAYBACK_START_DELAY_SEC, isPlaying, notifyPlayback } from './playbackState'
 
 let poly: Tone.PolySynth | null = null
@@ -43,9 +43,11 @@ const PUMP_MS = 200
  * so the delay only has to cover handing over the opening slice.
  */
 const gains: Partial<Record<LayerKind, Tone.Gain>> = {}
+let master: Tone.Gain | null = null
 function layerGain(kind: LayerKind): Tone.Gain {
+  if (!master) master = createMasterBus()
   if (!gains[kind]) {
-    gains[kind] = new Tone.Gain(1).toDestination()
+    gains[kind] = new Tone.Gain(1).connect(master)
   }
   return gains[kind]!
 }
@@ -56,7 +58,7 @@ function getPoly(tone: ToneId): Tone.PolySynth {
     poly = null
   }
   if (!poly) {
-    poly = createPoly(tone).connect(layerGain('melody'))
+    poly = createPoly(tone, 'melody').connect(layerGain('melody'))
     polyTone = tone
   }
   return poly
@@ -115,7 +117,7 @@ function getChordPoly(tone: ToneId): Tone.PolySynth {
     chordPoly = null
   }
   if (!chordPoly) {
-    chordPoly = createPoly(tone).connect(layerGain('chords'))
+    chordPoly = createPoly(tone, 'chords').connect(layerGain('chords'))
     chordTone = tone
   }
   return chordPoly

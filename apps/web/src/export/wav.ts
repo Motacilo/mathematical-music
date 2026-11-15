@@ -17,7 +17,7 @@ import {
   type ToneId,
   type ToneMap,
 } from '../core/tones/presets'
-import { createBass, createChordVoices, createLead } from '../audio/voices'
+import { createBass, createChordVoices, createLead, createMasterBus } from '../audio/voices'
 import type { WavLayers } from './layers'
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {
@@ -134,13 +134,20 @@ function toAudioBuffer(rendered: unknown): AudioBuffer {
   throw new Error('Offline render did not return an AudioBuffer')
 }
 
+/** Master bus of the render in progress (set inside each Tone.Offline callback). */
+let bus: Tone.Gain | null = null
+function out(): Tone.Gain {
+  if (!bus) bus = createMasterBus()
+  return bus
+}
+
 function scheduleMonoMelody(
   phrases: Phrase[],
   volume: number,
   tone: ToneId,
 ): void {
   if (volume <= 0 || phrases.length === 0) return
-  const gain = new Tone.Gain(volume).toDestination()
+  const gain = new Tone.Gain(volume).connect(out())
   const synth = createLead(tone).connect(gain)
   let t = 0
   for (const phrase of phrases) {
@@ -163,7 +170,7 @@ function scheduleChords(
   tone: ToneId = 'piano',
 ): void {
   if (volume <= 0 || chords.length === 0) return
-  const gain = new Tone.Gain(volume).toDestination()
+  const gain = new Tone.Gain(volume).connect(out())
   // Separate synths to avoid PolySynth Offline quirks
   const voices = createChordVoices(tone, 4).map((synth) => synth.connect(gain))
   let t = 0
@@ -186,7 +193,7 @@ function scheduleChords(
 
 function scheduleBass(phrases: Phrase[], volume: number, tone: ToneId): void {
   if (volume <= 0 || phrases.length === 0) return
-  const gain = new Tone.Gain(volume * 2.2).toDestination()
+  const gain = new Tone.Gain(volume).connect(out())
   const synth = createBass(tone).connect(gain)
   let t = 0
   for (let pi = 0; pi < phrases.length; pi++) {
@@ -225,7 +232,7 @@ function scheduleBass(phrases: Phrase[], volume: number, tone: ToneId): void {
 
 function scheduleDrums(phrases: DrumPhrase[], volume: number): void {
   if (volume <= 0 || phrases.length === 0) return
-  const gain = new Tone.Gain(volume).toDestination()
+  const gain = new Tone.Gain(volume).connect(out())
   // Avoid MetalSynth/NoiseSynth Offline issues — use simple pitched hits
   const kick = new Tone.Synth({
     oscillator: { type: 'sine' },
@@ -268,6 +275,7 @@ export async function renderMixWavBlob(
 ): Promise<Blob> {
   const duration = mixDurationSec(layers)
   const rendered = await Tone.Offline(() => {
+    bus = createMasterBus()
     if (layers.melody?.length) {
       scheduleMonoMelody(
         layers.melody,
@@ -290,6 +298,7 @@ export async function renderMixWavBlob(
       scheduleDrums(layers.drums, audibleGain('drums', mixer))
     }
   }, duration)
+  bus = null
 
   return audioBufferToWav(toAudioBuffer(rendered))
 }
@@ -304,7 +313,7 @@ export async function renderWavBlob(
 ): Promise<Blob> {
   const duration = totalDurationSec(phrases)
   const rendered = await Tone.Offline(() => {
-    const synth = createLead(tone).toDestination()
+    const synth = createLead(tone).connect(createMasterBus())
 
     let t = 0
     for (const phrase of phrases) {
