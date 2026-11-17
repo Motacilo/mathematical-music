@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 const PRIVACY_URL = 'https://motacilo.com/privacy.html'
 
 export function AppFooter() {
@@ -9,6 +11,8 @@ export function AppFooter() {
         <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
           プライバシーポリシー
         </a>
+        {' '}
+        <Link to="/licenses">ライセンス</Link>
       </p>
     </footer>
   )

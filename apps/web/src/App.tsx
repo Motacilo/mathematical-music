@@ -11,6 +11,7 @@ const ChordsPage = lazy(() => import('./pages/ChordsPage'))
 const ComposerPage = lazy(() => import('./pages/ComposerPage'))
 const DrumsPage = lazy(() => import('./pages/DrumsPage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
+const LicensesPage = lazy(() => import('./pages/LicensesPage'))
 
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
             </Route>
             <Route path="/library" element={<Navigate to="/library/favorites" replace />} />
             <Route path="/library/:tab" element={<LibraryPage />} />
+            <Route path="/licenses" element={<LicensesPage />} />
             <Route path="*" element={<Navigate to="/layer/melody" replace />} />
           </Routes>
           </Suspense>
