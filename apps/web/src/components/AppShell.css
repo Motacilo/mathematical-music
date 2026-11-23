@@ -124,6 +124,10 @@
   --tab-accent: #a33a3a;
   --tab-bg: #f8e6e6;
 }
+.shell__tab--bgm {
+  --tab-accent: #1f7a8c;
+  --tab-bg: #e3f1f4;
+}
 .shell__tab--arrange {
   --tab-accent: #555;
   --tab-bg: #f4f4f4;
@@ -156,6 +160,10 @@
 .shell.theme-arrange {
   --accent: #555555;
   --muted: #6a6a6a;
+}
+.shell.theme-bgm {
+  --accent: #1f7a8c;
+  --muted: #4f6b72;
 }
 .shell.theme-start {
   --accent: #c45c26;

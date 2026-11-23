@@ -85,8 +85,9 @@ function ensurePitches(bar: ChordBar): number[] {
   return pitches.length > 0 ? pitches : [60]
 }
 
-function expandBlock(pitches: number[]): ChordPlayEvent[] {
-  return [{ pitches, timeBeat: 0, durationBeats: 3.8 }]
+function expandBlock(pitches: number[], holdBeats?: number): ChordPlayEvent[] {
+  const duration = holdBeats == null ? 3.8 : Math.max(0.5, Math.min(3.8, holdBeats - 0.1))
+  return [{ pitches, timeBeat: 0, durationBeats: duration }]
 }
 
 function expandPulse(pitches: number[]): ChordPlayEvent[] {
@@ -206,7 +207,7 @@ export function expandChordBarPlay(
   style: ConcreteChordPlayStyle,
 ): ChordPlayEvent[] {
   const pitches = ensurePitches(bar)
-  if (bar.sustain) return expandBlock(pitches)
+  if (bar.sustain) return expandBlock(pitches, bar.holdBeats)
   switch (style) {
     case 'block':
       return expandBlock(pitches)

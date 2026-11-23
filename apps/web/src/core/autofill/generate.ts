@@ -374,6 +374,23 @@ export function generateAutofillSong(
   }
 }
 
+/** One diatonic chord by degree (1 = tonic, 5 = dominant), with default chord settings. */
+export function buildDegreeChord(
+  degree: number,
+  keyRoot: number,
+  scale: ScaleType,
+  bpm: number,
+): ChordBar | undefined {
+  return chordOfDegree(
+    degree,
+    keyRoot,
+    scale,
+    bpm,
+    createDefaultQualityEnable(),
+    createDefaultRootEnable(scale),
+  )
+}
+
 export function remainingStageCapacity(currentBars: number): number {
   return Math.max(0, MAX_STAGE_BARS - Math.max(0, currentBars))
 }

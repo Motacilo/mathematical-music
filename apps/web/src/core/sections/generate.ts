@@ -242,12 +242,15 @@ export function generateSectionCandidates(
   feel?: SongFeel,
   /** Reuse one chord style per role (a full song keeps A, B, chorus consistent). */
   chordStyles?: Map<SectionRole, ConcreteChordPlayStyle>,
+  /** Shortest section allowed. Default 2; the BGM tab goes down to 1. */
+  minBars = 2,
 ): SectionCandidate[] {
   return Array.from({ length: count }, (_, i) => {
     const { options, quiet } = resolveProfile(role)
     const styles = drumsFor(options, mood)
     const result = generateAutofillSong(bars, keyRoot, scale, bpm, {
       ...options,
+      minBars: Math.min(options.minBars ?? minBars, minBars),
       melodyDensity: (options.melodyDensity ?? 0) + (mood?.density ?? 0),
       bassRhythms: bassFor(options, mood),
       feel: feel ?? randomSongFeel(),

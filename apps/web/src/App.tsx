@@ -6,6 +6,7 @@ import { ProjectProvider } from './core/ProjectContext'
 import StartPage from './pages/StartPage'
 
 const ArrangePage = lazy(() => import('./pages/ArrangePage'))
+const BgmPage = lazy(() => import('./pages/BgmPage'))
 const BassPage = lazy(() => import('./pages/BassPage'))
 const ChordsPage = lazy(() => import('./pages/ChordsPage'))
 const ComposerPage = lazy(() => import('./pages/ComposerPage'))
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="drums" element={<DrumsPage />} />
               <Route path="autofill" element={<Navigate to="/layer/start" replace />} />
               <Route path="arrange" element={<ArrangePage />} />
+              <Route path="bgm" element={<BgmPage />} />
             </Route>
             <Route path="/library" element={<Navigate to="/library/favorites" replace />} />
             <Route path="/library/:tab" element={<LibraryPage />} />

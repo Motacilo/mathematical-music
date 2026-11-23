@@ -41,6 +41,8 @@ export interface ChordBar {
   scale: ScaleType
   /** Play this bar as one held chord, ignoring the song's strum pattern. */
   sustain?: boolean
+  /** With `sustain`: sound only this many beats, then rest (a ringing last bar). */
+  holdBeats?: number
   /** This bar's own play style, used when the layer's style is 'auto'. */
   playStyle?: ConcreteChordPlayStyle
 }
@@ -277,7 +279,7 @@ export const LAYER_LABELS: Record<LayerKind, string> = {
 }
 
 export const LAYER_ROUTES: {
-  kind: LayerKind | 'arrange' | 'start'
+  kind: LayerKind | 'arrange' | 'start' | 'bgm'
   path: string
   label: string
 }[] = [
@@ -287,4 +289,5 @@ export const LAYER_ROUTES: {
     { kind: 'bass', path: '/layer/bass', label: 'ベース' },
     { kind: 'drums', path: '/layer/drums', label: 'リズム' },
     { kind: 'arrange', path: '/layer/arrange', label: '出力' },
+    { kind: 'bgm', path: '/layer/bgm', label: 'ショートBGM' },
   ]

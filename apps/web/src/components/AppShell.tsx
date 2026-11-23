@@ -12,6 +12,7 @@ function themeFromPath(pathname: string): string {
   if (pathname.includes('/bass')) return 'theme-bass'
   if (pathname.includes('/drums')) return 'theme-drums'
   if (pathname.includes('/arrange')) return 'theme-arrange'
+  if (pathname.includes('/bgm')) return 'theme-bgm'
   return 'theme-melody'
 }
 
@@ -27,6 +28,8 @@ function tabThemeClass(kind: string): string {
       return 'shell__tab--drums'
     case 'arrange':
       return 'shell__tab--arrange'
+    case 'bgm':
+      return 'shell__tab--bgm'
     default:
       return 'shell__tab--melody'
   }
@@ -36,7 +39,8 @@ export function AppShell() {
   const { draft, setMeta } = useProject()
   const location = useLocation()
   const theme = themeFromPath(location.pathname)
-  const hideTheoryMeta = location.pathname.includes('/start')
+  const hideTheoryMeta =
+    location.pathname.includes('/start') || location.pathname.includes('/bgm')
   const { playing, stop } = usePlayback()
 
   return (

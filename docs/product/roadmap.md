@@ -17,6 +17,7 @@ Phase 0–4 と Phase E の大半を実装済み。未着手は **URL 共有** �
 | 7 | MIDI マルチトラック | ✅ 出力タブ。含めるパートを選択可 |
 | 8 | 簡易ミキサー | ✅ 音量・ミュート・ソロ（再生と WAV 両方に反映） |
 | 9 | おまかせ1曲生成 | ✅ はじめるタブ「いまの曲」右上の「おまかせで1曲作る」（11 区間を一括生成）。メロディはコードに合わせて不協和を回避。A/B/サビは 8 小節内で 4+4・2+2+4・4+2+2・なし を確率で選んで繰り返し。リズム型辞書＋曲ごとの個性（音域・跳躍・リズムの手札）で同じ雰囲気でも変化をつける |
+| – | ショートBGM | ✅ ショートBGMタブ。長さ（10秒〜3分）と BPM から目標小節数を出し、パターン（A〜F）をドラッグ＆ドロップで並べて合計が合えば作成。割り切れないときは少ない方／多い方を選択。終わり方は そのまま／繰り返し（ドミナント終止＋頭の音へ寄せる）／伸ばす（+1小節、後半休符）。WAV / MIDI 保存 |
 | 10 | URL 共有 | ⬜ 未着手 |
 | – | ちょいアレンジ | ✅ 候補から高さ違い・数音変更などのバリエーション生成（ロードマップ外で追加） |
 
@@ -70,7 +71,7 @@ Phase 0–4 と Phase E の大半を実装済み。未着手は **URL 共有** �
   → ライブラリ: お気に入り・保存譜面の再呼び出し
 ```
 
-タブ: はじめる / メロディ / コード / ベース / リズム / 出力（＋ライブラリ）
+タブ: はじめる / メロディ / コード / ベース / リズム / 出力 / ショートBGM（＋ライブラリ）
 
 ### 2-3. 主要ファイル
 
@@ -86,7 +87,7 @@ Phase 0–4 と Phase E の大半を実装済み。未着手は **URL 共有** �
 | `apps/web/src/core/mood/` / `tones/` | ムード・音色プリセット |
 | `apps/web/src/core/autofill/` | おまかせ1曲生成 |
 | `apps/web/src/core/arrange/` | ちょいアレンジのバリエーション |
-| `apps/web/src/pages/` | StartPage / ComposerPage / ChordsPage / BassPage / DrumsPage / ArrangePage（出力）/ LibraryPage |
+| `apps/web/src/pages/` | StartPage / ComposerPage / ChordsPage / BassPage / DrumsPage / ArrangePage（出力）/ BgmPage（ショートBGM）/ LibraryPage |
 | `apps/web/src/audio/` | 再生（player・音色 voices・PlaybackContext） |
 | `apps/web/src/export/midi.ts` / `wav.ts` | マルチトラック MIDI・ミックス WAV |
 | `apps/web/src/core/composerDraft.ts` / `libraryStore.ts` | 下書き・ライブラリ永続化 |
