@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import { playLayers } from '../audio/player'
 import { AppFooter } from '../components/AppFooter'
+import { VolumeMixer } from '../components/VolumeMixer'
 import { NumberField } from '../components/NumberField'
 import { PlayStopButton } from '../components/PlayStopButton'
 import { usePlayback } from '../audio/usePlayback'
@@ -32,7 +33,6 @@ import {
 } from '../core/bgm/session'
 import { moodById, MOODS, type MoodId } from '../core/mood/presets'
 import { useProject } from '../core/ProjectContext'
-import { createDefaultMixer } from '../core/projectTypes'
 import { KEY_NAMES, keyOptionLabel } from '../core/scale'
 import './ComposerPage.css'
 import './LayerPages.css'
@@ -161,7 +161,7 @@ export default function BgmPage() {
 
   const play = async () => {
     if (!layers) return
-    const leadMs = await playLayers(layers, createDefaultMixer(), undefined, {
+    const leadMs = await playLayers(layers, draft.mixer, undefined, {
       chordPlayStyle: 'auto',
       tones: draft.tones,
     })
@@ -173,7 +173,7 @@ export default function BgmPage() {
     setExporting(true)
     void import('../export/wav')
       .then(({ downloadMixWav }) =>
-        downloadMixWav(layers, createDefaultMixer(), 'short-bgm.wav', 'auto', draft.tones),
+        downloadMixWav(layers, draft.mixer, 'short-bgm.wav', 'auto', draft.tones),
       )
       .catch((err: unknown) => {
         console.error(err)
@@ -241,24 +241,6 @@ export default function BgmPage() {
         <h2>長さ・速さ・キー</h2>
         <div className="bgm-fields">
           <label className="section-bars">
-            長さ（秒）
-            <NumberField
-              value={s.seconds}
-              min={BGM_MIN_SECONDS}
-              max={BGM_MAX_SECONDS}
-              onCommit={(seconds) => update({ seconds, pickedTarget: null })}
-            />
-          </label>
-          <label className="section-bars">
-            BPM
-            <NumberField
-              value={s.bpm}
-              min={BGM_MIN_BPM}
-              max={BGM_MAX_BPM}
-              onCommit={(bpm) => update({ bpm, pickedTarget: null })}
-            />
-          </label>
-          <label className="section-bars">
             キー
             <select
               value={s.keyRoot}
@@ -282,16 +264,48 @@ export default function BgmPage() {
             </select>
           </label>
         </div>
-        <input
-          className="bgm-range"
-          type="range"
-          aria-label="長さ（秒）"
-          min={BGM_MIN_SECONDS}
-          max={BGM_MAX_SECONDS}
-          step={1}
-          value={s.seconds}
-          onChange={(e) => update({ seconds: Number(e.target.value), pickedTarget: null })}
-        />
+        <div className="bgm-slider-row">
+          <label className="bgm-slider-row__field">
+            長さ（秒）
+            <NumberField
+              value={s.seconds}
+              min={BGM_MIN_SECONDS}
+              max={BGM_MAX_SECONDS}
+              onCommit={(seconds) => update({ seconds, pickedTarget: null })}
+            />
+          </label>
+          <input
+            className="bgm-range"
+            type="range"
+            aria-label="長さ（秒）"
+            min={BGM_MIN_SECONDS}
+            max={BGM_MAX_SECONDS}
+            step={1}
+            value={s.seconds}
+            onChange={(e) => update({ seconds: Number(e.target.value), pickedTarget: null })}
+          />
+        </div>
+        <div className="bgm-slider-row">
+          <label className="bgm-slider-row__field">
+            速さ（BPM）
+            <NumberField
+              value={s.bpm}
+              min={BGM_MIN_BPM}
+              max={BGM_MAX_BPM}
+              onCommit={(bpm) => update({ bpm, pickedTarget: null })}
+            />
+          </label>
+          <input
+            className="bgm-range"
+            type="range"
+            aria-label="速さ（BPM）"
+            min={BGM_MIN_BPM}
+            max={BGM_MAX_BPM}
+            step={1}
+            value={s.bpm}
+            onChange={(e) => update({ bpm: Number(e.target.value), pickedTarget: null })}
+          />
+        </div>
         <p className="layer-hint">
           1小節は{barSeconds(s.bpm).toFixed(2).replace(/0$/, '')}秒です。
           {formatSeconds(s.seconds)}なら {exact.toFixed(2).replace(/\.?0+$/, '')} 小節ぶんです。
@@ -357,11 +371,12 @@ export default function BgmPage() {
               <span className="bgm-blocks__label">{block.label}</span>
               <label className="section-bars">
                 小節数
-                <NumberField
-                  value={block.bars}
+                <input
+                  type="number"
                   min={BGM_MIN_BLOCK_BARS}
                   max={BGM_MAX_BLOCK_BARS}
-                  onCommit={(bars) => setBlockBars(block.id, bars)}
+                  value={block.bars}
+                  onChange={(e) => setBlockBars(block.id, Number(e.target.value))}
                 />
               </label>
             </li>
@@ -497,6 +512,12 @@ export default function BgmPage() {
       <section className="app__section">
         <h2>音色</h2>
         <TonePicker tones={draft.tones} onChange={setTones} />
+      </section>
+
+      <section className="app__section">
+        <h2>音量</h2>
+        <p className="layer-hint">リズムを含め、パートごとの大きさです。次に聴くとき・保存するときから変わります。</p>
+        <VolumeMixer />
       </section>
 
       <section className="app__section">

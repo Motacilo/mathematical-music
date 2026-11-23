@@ -5,6 +5,7 @@ import { usePlayback } from '../audio/usePlayback'
 import { AppFooter } from '../components/AppFooter'
 import { PlayStopButton } from '../components/PlayStopButton'
 import { TonePicker } from '../components/TonePicker'
+import { VolumeMixer } from '../components/VolumeMixer'
 import { useProject } from '../core/ProjectContext'
 import { moodById, MOODS, type MoodId } from '../core/mood/presets'
 import {
@@ -28,7 +29,6 @@ import {
   sliceDrums,
   slicePhrases,
 } from '../core/sections/timeline'
-import { createDefaultMixer } from '../core/projectTypes'
 import './ComposerPage.css'
 import './LayerPages.css'
 import './SectionsPage.css'
@@ -121,7 +121,7 @@ export default function StartPage() {
     setActiveSectionId(highlightId)
     setPlayingId(id)
     try {
-      await playLayers(block, createDefaultMixer(), undefined, {
+      await playLayers(block, draft.mixer, undefined, {
         chordPlayStyle: draft.chords.playStyle ?? 'block',
         tones: draft.tones,
       })
@@ -365,6 +365,14 @@ export default function StartPage() {
           メロディ、コード、ベースの鳴り方です。次に聴くときから変わります。
         </p>
         <TonePicker tones={draft.tones} onChange={setTones} />
+      </section>
+
+      <section className="app__section">
+        <h2>音量</h2>
+        <p className="layer-hint">
+          リズムを含め、パートごとの大きさです。次に聴くときから変わります。
+        </p>
+        <VolumeMixer />
       </section>
 
       <section className="app__section">

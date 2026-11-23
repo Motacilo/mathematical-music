@@ -246,80 +246,85 @@ function scheduleBass(phrases: Phrase[], volume: number, tone: ToneId): void {
 }
 
 /** Offline start times must be > 0 for these voices. */
-const DRUM_START_OFFSET_SEC = 0.01
-/** Keeps the file's drums at the level they had before the voices changed. */
-const DRUM_WAV_TRIM = 0.56
-/** Hat level against the snare, as in live playback (-12 dB on the metal voice). */
-const HAT_LEVEL_DB = -12
+const DRUM_LEAD_SEC = 0.01
+/** Live playback fires hats at this velocity, on top of the voice's -12 dB. */
+const HAT_VELOCITY = 0.3
 
-function scheduleDrums(phrases: DrumPhrase[], volume: number): void {
-  if (volume <= 0 || phrases.length === 0) return
-  const gain = new Tone.Gain(volume * DRUM_WAV_TRIM).connect(out())
-  // The same voices as live playback, so the file sounds like what was auditioned.
-  const kick = new Tone.MembraneSynth({
-    envelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.1 },
-  }).connect(gain)
-  // NoiseSynth / MetalSynth restart their sources on every hit, which Tone's
-  // Offline timeline rejects. The same sounds are built from sources that run
-  // for the whole render, with only an envelope opening per hit.
-  const snareEnv = new Tone.AmplitudeEnvelope({
-    attack: 0.001,
-    decay: 0.15,
-    sustain: 0,
-    release: 0.05,
-  }).connect(gain)
-  new Tone.Noise('white').connect(snareEnv).start(0)
-  const hatEnv = new Tone.AmplitudeEnvelope({
-    attack: 0.001,
-    decay: 0.08,
-    sustain: 0,
-    release: 0.01,
-  }).connect(gain)
-  const hatHighpass = new Tone.Filter(4000, 'highpass').connect(hatEnv)
-  const hatBand = new Tone.Filter(4000, 'bandpass').connect(hatHighpass)
-  const HAT_RATIOS = [1, 1.483, 1.932, 2.5, 3.16, 4.74]
-  for (const ratio of HAT_RATIOS) {
-    new Tone.FMOscillator({
-      type: 'square',
-      modulationType: 'square',
-      harmonicity: 5.1,
-      modulationIndex: 32,
-      frequency: 200 * ratio,
-    })
-      .connect(hatBand)
-      .start(0)
-  }
-  const hatLevel = Tone.dbToGain(HAT_LEVEL_DB)
+type DrumKind = 'kick' | 'snare' | 'hat'
+type DrumCue = { at: number; buffer: Tone.ToneAudioBuffer }
 
-  type Cue = { at: number; dur: number }
-  const kicks: Cue[] = []
-  const snares: Cue[] = []
-  const hats: Cue[] = []
+/** One hit of the same voice live playback uses, rendered on its own. */
+async function renderDrumHit(kind: DrumKind, dur: number): Promise<Tone.ToneAudioBuffer> {
+  return Tone.Offline(() => {
+    if (kind === 'kick') {
+      new Tone.MembraneSynth({
+        envelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.1 },
+      })
+        .toDestination()
+        .triggerAttackRelease('C1', dur, DRUM_LEAD_SEC)
+    } else if (kind === 'snare') {
+      new Tone.NoiseSynth({
+        noise: { type: 'white' },
+        envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.05 },
+      })
+        .toDestination()
+        .triggerAttackRelease(dur, DRUM_LEAD_SEC)
+    } else {
+      const hat = new Tone.MetalSynth({
+        envelope: { attack: 0.001, decay: 0.08, release: 0.01 },
+        harmonicity: 5.1,
+        modulationIndex: 32,
+        resonance: 4000,
+        octaves: 1.5,
+      }).toDestination()
+      hat.volume.value = -12
+      hat.triggerAttackRelease(DRUM_LEAD_SEC, dur, HAT_VELOCITY)
+    }
+  }, dur + 0.7)
+}
+
+/**
+ * Drum hits are rendered one by one with the live voices (those synths cannot
+ * fire repeatedly inside a single offline render), then placed as samples.
+ */
+async function prepareDrums(phrases: DrumPhrase[]): Promise<DrumCue[]> {
+  const raw: { at: number; kind: DrumKind; dur: number }[] = []
   let t0 = 0
   for (const phrase of phrases) {
     const beatSec = 60 / Math.max(1, phrase.bpm)
     for (const hit of phrase.hits) {
-      const at = t0 + hit.beat * beatSec
       const dur = DURATION_BEATS[hit.duration] * beatSec
-      if (hit.instrument === 'kick') kicks.push({ at, dur: Math.max(0.05, dur) })
-      else if (hit.instrument === 'snare') snares.push({ at, dur: Math.max(0.05, dur) })
-      else hats.push({ at, dur: Math.max(0.03, dur * 0.5) })
+      raw.push({
+        at: t0 + hit.beat * beatSec,
+        kind: hit.instrument === 'kick' ? 'kick' : hit.instrument === 'snare' ? 'snare' : 'hat',
+        dur: hit.instrument === 'hat' ? Math.max(0.03, dur * 0.5) : Math.max(0.05, dur),
+      })
     }
     t0 += phrase.bars * 4 * beatSec
   }
-  // A mono synth needs strictly increasing start times.
-  const play = (cues: Cue[], fire: (cue: Cue, at: number) => void) => {
-    cues.sort((x, y) => x.at - y.at)
-    let last = -1
-    for (const cue of cues) {
-      const at = Math.max(cue.at + DRUM_START_OFFSET_SEC, last + 0.002)
-      fire(cue, at)
-      last = at
+  const cache = new Map<string, Promise<Tone.ToneAudioBuffer>>()
+  const cues: DrumCue[] = []
+  for (const r of raw) {
+    const key = `${r.kind}:${r.dur.toFixed(3)}`
+    let pending = cache.get(key)
+    if (!pending) {
+      pending = renderDrumHit(r.kind, r.dur)
+      cache.set(key, pending)
     }
+    cues.push({ at: r.at, buffer: await pending })
   }
-  play(kicks, (cue, at) => kick.triggerAttackRelease('C1', cue.dur, at))
-  play(snares, (cue, at) => snareEnv.triggerAttackRelease(cue.dur, at))
-  play(hats, (cue, at) => hatEnv.triggerAttackRelease(cue.dur, at, hatLevel))
+  return cues
+}
+
+function scheduleDrums(cues: DrumCue[], volume: number): void {
+  if (volume <= 0 || cues.length === 0) return
+  const gain = new Tone.Gain(volume).connect(out())
+  for (const cue of cues) {
+    const src = new Tone.ToneBufferSource(cue.buffer).connect(gain)
+    const start = cue.at - DRUM_LEAD_SEC
+    if (start >= 0) src.start(start)
+    else src.start(0, -start)
+  }
 }
 
 export async function renderMixWavBlob(
@@ -329,6 +334,7 @@ export async function renderMixWavBlob(
   tones: ToneMap = createDefaultTones(),
 ): Promise<Blob> {
   const duration = mixDurationSec(layers)
+  const drumCues = layers.drums?.length ? await prepareDrums(layers.drums) : []
   const rendered = await Tone.Offline(() => {
     bus = createMasterBus()
     if (layers.melody?.length) {
@@ -350,7 +356,7 @@ export async function renderMixWavBlob(
       scheduleBass(layers.bass, audibleGain('bass', mixer), tones.bass)
     }
     if (layers.drums?.length) {
-      scheduleDrums(layers.drums, audibleGain('drums', mixer))
+      scheduleDrums(drumCues, audibleGain('drums', mixer))
     }
   }, duration)
   bus = null
