@@ -161,9 +161,12 @@ function addRingingBar(
   }
   const proto = song.melody[song.melody.length - 1]!
   const lastMelodyBar = song.melody[song.melody.length - 1]!
-  const held =
-    lastMelodyBar.notes[lastSoundingIndex(lastMelodyBar.notes)]?.pitch ??
-    nearestChordTone(60 + options.keyRoot, chord)
+  // The held melody note is the key's tonic, in the octave nearest the last note.
+  const lastPitch =
+    lastMelodyBar.notes[lastSoundingIndex(lastMelodyBar.notes)]?.pitch ?? 60 + options.keyRoot
+  let held = 60 + options.keyRoot
+  while (held - lastPitch > 6) held -= 12
+  while (lastPitch - held > 6) held += 12
   // The bass bar may end on a passing tone; the held note is the chord root.
   const rootPitch = chordRootMidiFromBar(chord, 3)
   const ringBar = (pitch: number): Phrase => ({
