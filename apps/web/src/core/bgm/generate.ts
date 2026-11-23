@@ -12,11 +12,21 @@ import type { SectionRole } from '../sections/roles'
 import type { Note, Phrase, ScaleType } from '../types'
 import type { BgmBlock, BgmEnding } from './plan'
 
+export type BgmSongSection = {
+  label: string
+  /** Index of the pattern (for colour); -1 for the ringing bar */
+  colorIndex: number
+  startBar: number
+  bars: number
+}
+
 export type BgmSong = {
   /** Every layer has exactly this many bars (the extra ringing bar included). */
   bars: number
   /** Bars the arrangement asked for, without the ringing bar. */
   planBars: number
+  /** Where each pattern sits, for labels and colour in the views */
+  sections: BgmSongSection[]
   melody: Phrase[]
   chords: ChordBar[]
   bass: Phrase[]
@@ -208,9 +218,17 @@ export function generateBgm(options: BgmOptions): BgmSong {
     drums: [] as DrumPhrase[],
   }
   let planBars = 0
+  const sections: BgmSongSection[] = []
   for (const id of arrangement) {
     const part = made.get(id)
     if (!part) continue
+    const colorIndex = blocks.findIndex((b) => b.id === id)
+    sections.push({
+      label: blocks[colorIndex]?.label ?? '',
+      colorIndex,
+      startBar: planBars,
+      bars: part.bars,
+    })
     song.melody.push(...clonePhrases(part.melody, 'mel'))
     song.chords.push(...cloneChords(part.chords))
     song.bass.push(...clonePhrases(part.bass, 'bass'))
@@ -220,11 +238,15 @@ export function generateBgm(options: BgmOptions): BgmSong {
 
   if (planBars > 0) {
     if (options.ending === 'loop') shapeLoopEnd(song, options)
-    if (options.ending === 'hold') addRingingBar(song, options)
+    if (options.ending === 'hold') {
+      addRingingBar(song, options)
+      sections.push({ label: '余韻', colorIndex: -1, startBar: planBars, bars: 1 })
+    }
   }
   return {
     bars: planBars + (options.ending === 'hold' && planBars > 0 ? 1 : 0),
     planBars,
+    sections,
     ...song,
   }
 }

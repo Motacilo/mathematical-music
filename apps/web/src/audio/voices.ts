@@ -22,6 +22,9 @@ const LEAD_LEVEL_DB: Record<ToneId, { melody: number; chords: number }> = {
   piano: { melody: 8, chords: 8 },
   soft: { melody: -10, chords: -13.5 },
   guitar: { melody: 10.5, chords: 5.5 },
+  musicbox: { melody: 4.7, chords: 4.7 },
+  glock: { melody: 5.5, chords: 5.5 },
+  xylo: { melody: 9.3, chords: 9.6 },
 }
 
 export type LeadPart = 'melody' | 'chords'
@@ -66,6 +69,40 @@ const LEAD: Record<ToneId, Omit<VoiceDef, 'volumeDb'>> = {
       },
     },
   },
+  // Struck-bar tones: a pure carrier with a short, bright FM "ping" on the attack.
+  musicbox: {
+    engine: 'fm',
+    options: {
+      harmonicity: 3,
+      modulationIndex: 0.9,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.002, decay: 0.9, sustain: 0, release: 0.6 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.1 },
+    },
+  },
+  glock: {
+    engine: 'fm',
+    options: {
+      harmonicity: 5.2,
+      modulationIndex: 3,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.001, decay: 0.7, sustain: 0, release: 0.5 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.001, decay: 0.25, sustain: 0, release: 0.2 },
+    },
+  },
+  xylo: {
+    engine: 'fm',
+    options: {
+      harmonicity: 3,
+      modulationIndex: 1.6,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.001, decay: 0.22, sustain: 0, release: 0.1 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.001, decay: 0.06, sustain: 0, release: 0.05 },
+    },
+  },
 }
 
 const BASS: Record<ToneId, VoiceDef> = {
@@ -102,6 +139,42 @@ const BASS: Record<ToneId, VoiceDef> = {
         sustain: 0,
         release: 0.05,
       },
+    },
+  },
+  musicbox: {
+    engine: 'fm',
+    volumeDb: 2.2,
+    options: {
+      harmonicity: 2,
+      modulationIndex: 0.8,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.002, decay: 0.7, sustain: 0.05, release: 0.3 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.08 },
+    },
+  },
+  glock: {
+    engine: 'fm',
+    volumeDb: 3.7,
+    options: {
+      harmonicity: 3.5,
+      modulationIndex: 2,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.001, decay: 0.5, sustain: 0, release: 0.3 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.1 },
+    },
+  },
+  xylo: {
+    engine: 'fm',
+    volumeDb: 5.0,
+    options: {
+      harmonicity: 4,
+      modulationIndex: 1.2,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.1 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.05 },
     },
   },
 }

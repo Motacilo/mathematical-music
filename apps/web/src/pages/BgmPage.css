@@ -67,7 +67,34 @@
 .bgm-target__option {
   display: block;
   padding: 4px 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.bgm-target__option.is-ghost,
+.bgm-target__note.is-ghost {
+  visibility: hidden;
+}
+
+.bgm-target__notes {
+  display: grid;
+}
+
+.bgm-target__tag {
+  margin-left: 0.6em;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.bgm-target__note {
+  grid-area: 1 / 1;
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.bgm-result .sv-overview {
+  margin-bottom: 10px;
 }
 
 /* One colour per pattern so a long arrangement reads at a glance. */

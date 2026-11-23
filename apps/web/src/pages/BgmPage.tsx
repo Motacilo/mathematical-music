@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import { playLayers } from '../audio/player'
 import { AppFooter } from '../components/AppFooter'
 import { PlayStopButton } from '../components/PlayStopButton'
+import { SongEditor, SongOverview } from '../components/SongView'
 import { TonePicker } from '../components/TonePicker'
 import {
   BGM_ENDINGS,
@@ -57,6 +58,7 @@ export default function BgmPage() {
   const [busy, setBusy] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [overIndex, setOverIndex] = useState<number | null>(null)
+  const [viewOpen, setViewOpen] = useState(false)
 
   useEffect(() => {
     writeBgmSession(s)
@@ -135,6 +137,7 @@ export default function BgmPage() {
           mood,
           ending: s.ending,
         })
+        setViewOpen(false)
         setS((prev) => ({ ...prev, song, stale: false }))
       } finally {
         setBusy(false)
@@ -295,23 +298,42 @@ export default function BgmPage() {
           1小節は{barSeconds(s.bpm).toFixed(2).replace(/0$/, '')}秒です。
           {formatSeconds(s.seconds)}なら {exact.toFixed(2).replace(/\.?0+$/, '')} 小節ぶんです。
         </p>
-        {options.length > 1 && (
-          <fieldset className="bgm-target">
-            <legend>割り切れないので、小節数を選んでください</legend>
-            {options.map((n) => (
-              <label key={n} className="bgm-target__option">
+        {/* Always the same height, so the cards below do not jump when the choice appears. */}
+        <fieldset className="bgm-target">
+          <legend>目標の小節数</legend>
+          {(options.length > 1 ? options : [options[0]!, options[0]! + 1]).map((n, i) => {
+            const real = options.length > 1 || i === 0
+            return (
+              <label
+                key={n}
+                className={`bgm-target__option${real ? '' : ' is-ghost'}`}
+                aria-hidden={real ? undefined : true}
+              >
                 <input
                   type="radio"
                   name="bgm-target"
                   checked={target === n}
+                  disabled={options.length === 1}
+                  tabIndex={real ? undefined : -1}
                   onChange={() => update({ pickedTarget: n })}
                 />
                 {n}小節（約{formatSeconds(secondsOfBars(n, s.bpm))}）
-                {n === options[0] ? '　少ない方' : '　多い方'}
+                <span className="bgm-target__tag">
+                  {options.length > 1 && i === 0 ? '少ない方' : '多い方'}
+                </span>
               </label>
-            ))}
-          </fieldset>
-        )}
+            )
+          })}
+          {/* Both notes share one cell, so the box keeps its height either way. */}
+          <div className="bgm-target__notes">
+            <p className={`bgm-target__note${options.length > 1 ? '' : ' is-ghost'}`}>
+              割り切れないので、どちらかを選んでください。
+            </p>
+            <p className={`bgm-target__note${options.length > 1 ? ' is-ghost' : ''}`}>
+              ちょうど割り切れるので、この小節数で決まりです。
+            </p>
+          </div>
+        </fieldset>
       </section>
 
       <section className="app__section">
@@ -506,6 +528,7 @@ export default function BgmPage() {
                 設定を変えました。いまの曲は変える前のものです。作り直すと反映されます。
               </p>
             )}
+            <SongOverview song={song} onOpen={() => setViewOpen(true)} />
             <div className="export-actions">
               <PlayStopButton
                 label="聴く"
@@ -522,6 +545,19 @@ export default function BgmPage() {
           </div>
         )}
       </section>
+
+      {song && viewOpen && (
+        <SongEditor
+          song={song}
+          bpm={s.bpm}
+          keyRoot={s.keyRoot}
+          scale={s.scale}
+          tones={draft.tones}
+          onChange={(next) => setS((prev) => ({ ...prev, song: next }))}
+          onClose={() => setViewOpen(false)}
+          onPlay={() => void play()}
+        />
+      )}
 
       <AppFooter />
     </div>

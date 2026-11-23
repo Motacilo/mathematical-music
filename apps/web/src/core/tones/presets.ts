@@ -1,4 +1,4 @@
-export type ToneId = 'piano' | 'soft' | 'guitar'
+export type ToneId = 'piano' | 'soft' | 'guitar' | 'musicbox' | 'glock' | 'xylo'
 
 export type ToneLayer = 'melody' | 'chords' | 'bass'
 
@@ -8,6 +8,9 @@ export const TONE_OPTIONS: readonly { id: ToneId; label: string }[] = [
   { id: 'piano', label: 'ピアノ' },
   { id: 'soft', label: 'やわらかい' },
   { id: 'guitar', label: 'ギター' },
+  { id: 'musicbox', label: 'オルゴール' },
+  { id: 'glock', label: '鉄琴' },
+  { id: 'xylo', label: '木琴' },
 ]
 
 export const TONE_LAYER_LABELS: Record<ToneLayer, string> = {
@@ -21,12 +24,18 @@ const GM_LEAD: Record<ToneId, number> = {
   piano: 0,
   soft: 89,
   guitar: 25,
+  musicbox: 10, // Music Box
+  glock: 9, // Glockenspiel
+  xylo: 13, // Xylophone
 }
 
 const GM_BASS: Record<ToneId, number> = {
   piano: 32,
   soft: 38,
   guitar: 33,
+  musicbox: 10,
+  glock: 11, // Vibraphone: a mellower low metal bar
+  xylo: 12, // Marimba: the low-register wooden bar
 }
 
 export function createDefaultTones(): ToneMap {
@@ -37,7 +46,7 @@ export function gmProgram(layer: ToneLayer, id: ToneId): number {
   return layer === 'bass' ? GM_BASS[id] : GM_LEAD[id]
 }
 
-const TONE_IDS: readonly ToneId[] = ['piano', 'soft', 'guitar']
+const TONE_IDS: readonly ToneId[] = ['piano', 'soft', 'guitar', 'musicbox', 'glock', 'xylo']
 
 export function isToneId(value: unknown): value is ToneId {
   return typeof value === 'string' && (TONE_IDS as readonly string[]).includes(value)
