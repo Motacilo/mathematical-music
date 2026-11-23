@@ -300,3 +300,29 @@
   border-radius: 4px;
   border: 1px solid rgba(31, 122, 140, 0.45);
 }
+
+.sv-rows {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+}
+
+.sv-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4.6rem;
+  z-index: 2;
+  display: none;
+  width: 2px;
+  background: #d62f2f;
+  box-shadow: 0 0 0 1px rgba(214, 47, 47, 0.25);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.sv-playhead--overview {
+  left: 0;
+  z-index: 3;
+  will-change: left;
+}

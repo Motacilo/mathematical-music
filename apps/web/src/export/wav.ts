@@ -245,41 +245,81 @@ function scheduleBass(phrases: Phrase[], volume: number, tone: ToneId): void {
   }
 }
 
+/** Offline start times must be > 0 for these voices. */
+const DRUM_START_OFFSET_SEC = 0.01
+/** Keeps the file's drums at the level they had before the voices changed. */
+const DRUM_WAV_TRIM = 0.56
+/** Hat level against the snare, as in live playback (-12 dB on the metal voice). */
+const HAT_LEVEL_DB = -12
+
 function scheduleDrums(phrases: DrumPhrase[], volume: number): void {
   if (volume <= 0 || phrases.length === 0) return
-  const gain = new Tone.Gain(volume).connect(out())
-  // Avoid MetalSynth/NoiseSynth Offline issues — use simple pitched hits
-  const kick = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.001, decay: 0.25, sustain: 0, release: 0.05 },
+  const gain = new Tone.Gain(volume * DRUM_WAV_TRIM).connect(out())
+  // The same voices as live playback, so the file sounds like what was auditioned.
+  const kick = new Tone.MembraneSynth({
+    envelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.1 },
   }).connect(gain)
-  const snare = new Tone.Synth({
-    oscillator: { type: 'triangle' },
-    envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.04 },
+  // NoiseSynth / MetalSynth restart their sources on every hit, which Tone's
+  // Offline timeline rejects. The same sounds are built from sources that run
+  // for the whole render, with only an envelope opening per hit.
+  const snareEnv = new Tone.AmplitudeEnvelope({
+    attack: 0.001,
+    decay: 0.15,
+    sustain: 0,
+    release: 0.05,
   }).connect(gain)
-  const hat = new Tone.Synth({
-    oscillator: { type: 'square' },
-    envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 },
+  new Tone.Noise('white').connect(snareEnv).start(0)
+  const hatEnv = new Tone.AmplitudeEnvelope({
+    attack: 0.001,
+    decay: 0.08,
+    sustain: 0,
+    release: 0.01,
   }).connect(gain)
-  hat.volume.value = -18
-  snare.volume.value = -8
+  const hatHighpass = new Tone.Filter(4000, 'highpass').connect(hatEnv)
+  const hatBand = new Tone.Filter(4000, 'bandpass').connect(hatHighpass)
+  const HAT_RATIOS = [1, 1.483, 1.932, 2.5, 3.16, 4.74]
+  for (const ratio of HAT_RATIOS) {
+    new Tone.FMOscillator({
+      type: 'square',
+      modulationType: 'square',
+      harmonicity: 5.1,
+      modulationIndex: 32,
+      frequency: 200 * ratio,
+    })
+      .connect(hatBand)
+      .start(0)
+  }
+  const hatLevel = Tone.dbToGain(HAT_LEVEL_DB)
 
+  type Cue = { at: number; dur: number }
+  const kicks: Cue[] = []
+  const snares: Cue[] = []
+  const hats: Cue[] = []
   let t0 = 0
   for (const phrase of phrases) {
     const beatSec = 60 / Math.max(1, phrase.bpm)
     for (const hit of phrase.hits) {
-      const t = t0 + hit.beat * beatSec
-      const dur = Math.max(0.03, DURATION_BEATS[hit.duration] * beatSec)
-      if (hit.instrument === 'kick') {
-        kick.triggerAttackRelease(60, dur, t)
-      } else if (hit.instrument === 'snare') {
-        snare.triggerAttackRelease(200, dur * 0.6, t)
-      } else {
-        hat.triggerAttackRelease(8000, dur * 0.4, t)
-      }
+      const at = t0 + hit.beat * beatSec
+      const dur = DURATION_BEATS[hit.duration] * beatSec
+      if (hit.instrument === 'kick') kicks.push({ at, dur: Math.max(0.05, dur) })
+      else if (hit.instrument === 'snare') snares.push({ at, dur: Math.max(0.05, dur) })
+      else hats.push({ at, dur: Math.max(0.03, dur * 0.5) })
     }
     t0 += phrase.bars * 4 * beatSec
   }
+  // A mono synth needs strictly increasing start times.
+  const play = (cues: Cue[], fire: (cue: Cue, at: number) => void) => {
+    cues.sort((x, y) => x.at - y.at)
+    let last = -1
+    for (const cue of cues) {
+      const at = Math.max(cue.at + DRUM_START_OFFSET_SEC, last + 0.002)
+      fire(cue, at)
+      last = at
+    }
+  }
+  play(kicks, (cue, at) => kick.triggerAttackRelease('C1', cue.dur, at))
+  play(snares, (cue, at) => snareEnv.triggerAttackRelease(cue.dur, at))
+  play(hats, (cue, at) => hatEnv.triggerAttackRelease(cue.dur, at, hatLevel))
 }
 
 export async function renderMixWavBlob(

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { playPhrases } from '../audio/player'
 import {
   canMerge,
@@ -66,20 +66,59 @@ function pitchBounds(notes: LaneNote[]): { min: number; max: number } {
   return { min, max }
 }
 
+/**
+ * Calls `onBeat` every frame while the tune plays (null when it does not).
+ * Drawing is left to the callback so the lanes are not re-rendered per frame.
+ */
+function usePlayheadLoop(
+  startMs: number | null,
+  bpm: number,
+  totalBeats: number,
+  onBeat: (beat: number | null) => void,
+) {
+  const callback = useRef(onBeat)
+  callback.current = onBeat
+  useEffect(() => {
+    if (startMs == null) {
+      callback.current(null)
+      return
+    }
+    let frame = 0
+    const tick = () => {
+      const beat = Math.max(0, ((performance.now() - startMs) / 1000) * (bpm / 60))
+      callback.current(Math.min(beat, totalBeats))
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [startMs, bpm, totalBeats])
+}
+
 const colorClass = (index: number) => (index < 0 ? 'sv-color-end' : `bgm-color-${index % 6}`)
 
 /** The melody of the whole song squeezed into one strip. Click to open the full view. */
 export function SongOverview({
   song,
+  bpm,
+  playStartMs,
   onOpen,
 }: {
   song: BgmSong
+  bpm: number
+  playStartMs: number | null
   onOpen: () => void
 }) {
+  const head = useRef<HTMLSpanElement>(null)
   const notes = useMemo(() => laneNotes(song.melody), [song.melody])
   const { min, max } = pitchBounds(notes)
   const rows = max - min + 1
   const totalBeats = song.bars * 4
+  usePlayheadLoop(playStartMs, bpm, totalBeats, (beat) => {
+    const el = head.current
+    if (!el) return
+    el.style.display = beat == null ? 'none' : 'block'
+    if (beat != null) el.style.left = `${(beat / totalBeats) * 100}%`
+  })
   return (
     <button
       type="button"
@@ -116,6 +155,7 @@ export function SongOverview({
             />
           ))}
       </svg>
+      <span ref={head} className="sv-playhead sv-playhead--overview" aria-hidden />
       <span className="sv-overview__hint">クリックで拡大（全パートの表示・音の編集）</span>
     </button>
   )
@@ -237,6 +277,7 @@ type EditorProps = {
   keyRoot: number
   scale: ScaleType
   tones: ToneMap
+  playStartMs: number | null
   onChange: (song: BgmSong) => void
   onClose: () => void
   onPlay: () => void | Promise<void>
@@ -252,14 +293,34 @@ export function SongEditor({
   keyRoot,
   scale,
   tones,
+  playStartMs,
   onChange,
   onClose,
   onPlay,
 }: EditorProps) {
+  const head = useRef<HTMLDivElement>(null)
+  const scroller = useRef<HTMLDivElement>(null)
   const [selection, setSelection] = useState<Selection>(null)
   const [ppb, setPpb] = useState(16)
   const barPx = ppb * 4
   const width = song.bars * barPx
+
+  usePlayheadLoop(playStartMs, bpm, song.bars * 4, (beat) => {
+    const el = head.current
+    if (!el) return
+    el.style.display = beat == null ? 'none' : 'block'
+    if (beat == null) return
+    const x = beat * ppb
+    el.style.transform = `translateX(${x}px)`
+    // Follow the bar: turn the page when it nears the right edge.
+    const box = scroller.current
+    if (box) {
+      const at = el.offsetLeft + x
+      if (at > box.scrollLeft + box.clientWidth - 40 || at < box.scrollLeft + el.offsetLeft) {
+        box.scrollLeft = Math.max(0, at - box.clientWidth * 0.3)
+      }
+    }
+  })
 
   const audition = (layer: NoteLayer, bar: number, pitch: number) => {
     const phrase = song[layer][bar]
@@ -365,7 +426,9 @@ export function SongEditor({
           </div>
         </header>
 
-        <div className="sv-scroll">
+        <div className="sv-scroll" ref={scroller}>
+          <div className="sv-rows">
+          <div ref={head} className="sv-playhead" aria-hidden />
           <div className="sv-row">
             <div className="sv-label" />
             <div className="sv-track sv-ruler" style={trackStyle}>
@@ -419,6 +482,7 @@ export function SongEditor({
             <div className="sv-track sv-grid" style={trackStyle}>
               <DrumLane song={song} ppb={ppb} />
             </div>
+          </div>
           </div>
         </div>
 

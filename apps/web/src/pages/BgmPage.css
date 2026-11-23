@@ -35,6 +35,7 @@
 }
 
 .bgm-fields .section-bars input {
+  box-sizing: border-box;
   font-family: inherit;
   font-size: 0.95rem;
   width: 6.5rem;

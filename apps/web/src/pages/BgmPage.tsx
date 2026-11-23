@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import { playLayers } from '../audio/player'
 import { AppFooter } from '../components/AppFooter'
+import { NumberField } from '../components/NumberField'
 import { PlayStopButton } from '../components/PlayStopButton'
+import { usePlayback } from '../audio/usePlayback'
 import { SongEditor, SongOverview } from '../components/SongView'
 import { TonePicker } from '../components/TonePicker'
 import {
@@ -59,10 +61,17 @@ export default function BgmPage() {
   const [exporting, setExporting] = useState(false)
   const [overIndex, setOverIndex] = useState<number | null>(null)
   const [viewOpen, setViewOpen] = useState(false)
+  const { playing } = usePlayback()
+  /** performance.now() when the whole tune sounds its first beat; null when not playing it */
+  const [playStartMs, setPlayStartMs] = useState<number | null>(null)
 
   useEffect(() => {
     writeBgmSession(s)
   }, [s])
+
+  useEffect(() => {
+    if (!playing) setPlayStartMs(null)
+  }, [playing])
 
   /** Change settings. A tune made before the change is kept but marked as out of date. */
   const update = (patch: Partial<BgmSession>) =>
@@ -152,10 +161,11 @@ export default function BgmPage() {
 
   const play = async () => {
     if (!layers) return
-    await playLayers(layers, createDefaultMixer(), undefined, {
+    const leadMs = await playLayers(layers, createDefaultMixer(), undefined, {
       chordPlayStyle: 'auto',
       tones: draft.tones,
     })
+    setPlayStartMs(performance.now() + leadMs)
   }
 
   const saveWav = () => {
@@ -232,32 +242,20 @@ export default function BgmPage() {
         <div className="bgm-fields">
           <label className="section-bars">
             長さ（秒）
-            <input
-              type="number"
+            <NumberField
+              value={s.seconds}
               min={BGM_MIN_SECONDS}
               max={BGM_MAX_SECONDS}
-              value={s.seconds}
-              onChange={(e) =>
-                update({
-                  seconds: clampInt(Number(e.target.value), BGM_MIN_SECONDS, BGM_MAX_SECONDS),
-                  pickedTarget: null,
-                })
-              }
+              onCommit={(seconds) => update({ seconds, pickedTarget: null })}
             />
           </label>
           <label className="section-bars">
             BPM
-            <input
-              type="number"
+            <NumberField
+              value={s.bpm}
               min={BGM_MIN_BPM}
               max={BGM_MAX_BPM}
-              value={s.bpm}
-              onChange={(e) =>
-                update({
-                  bpm: clampInt(Number(e.target.value), BGM_MIN_BPM, BGM_MAX_BPM),
-                  pickedTarget: null,
-                })
-              }
+              onCommit={(bpm) => update({ bpm, pickedTarget: null })}
             />
           </label>
           <label className="section-bars">
@@ -359,12 +357,11 @@ export default function BgmPage() {
               <span className="bgm-blocks__label">{block.label}</span>
               <label className="section-bars">
                 小節数
-                <input
-                  type="number"
+                <NumberField
+                  value={block.bars}
                   min={BGM_MIN_BLOCK_BARS}
                   max={BGM_MAX_BLOCK_BARS}
-                  value={block.bars}
-                  onChange={(e) => setBlockBars(block.id, Number(e.target.value))}
+                  onCommit={(bars) => setBlockBars(block.id, bars)}
                 />
               </label>
             </li>
@@ -528,7 +525,12 @@ export default function BgmPage() {
                 設定を変えました。いまの曲は変える前のものです。作り直すと反映されます。
               </p>
             )}
-            <SongOverview song={song} onOpen={() => setViewOpen(true)} />
+            <SongOverview
+              song={song}
+              bpm={s.bpm}
+              playStartMs={playStartMs}
+              onOpen={() => setViewOpen(true)}
+            />
             <div className="export-actions">
               <PlayStopButton
                 label="聴く"
@@ -553,6 +555,7 @@ export default function BgmPage() {
           keyRoot={s.keyRoot}
           scale={s.scale}
           tones={draft.tones}
+          playStartMs={playStartMs}
           onChange={(next) => setS((prev) => ({ ...prev, song: next }))}
           onClose={() => setViewOpen(false)}
           onPlay={() => void play()}
